@@ -9,5 +9,5 @@
     // narrows what TypeScript picks up automatically.
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src", "spike"]
+  "include": ["src", "spike", "prisma.config.ts", "vitest.config.ts"]
 }
