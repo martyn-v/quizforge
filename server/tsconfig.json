@@ -3,7 +3,11 @@
   "compilerOptions": {
     "rootDir": ".",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    // vitest runs with globals: true, so describe/it/expect need to be typed
+    // as globals too. Listing "node" as well because setting `types` at all
+    // narrows what TypeScript picks up automatically.
+    "types": ["node", "vitest/globals"]
   },
   "include": ["src", "spike"]
 }

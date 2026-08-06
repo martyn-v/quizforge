@@ -59,7 +59,11 @@ implementing something else.
 ## Architecture notes
 
 - The graph compiles once at bootstrap in `AgentModule` and is injected;
-  controllers stay thin. `PostgresSaver.setup()` runs in `onModuleInit`.
+  controllers stay thin. The checkpointer is built and `setup()` is awaited
+  inside its async factory, not in `onModuleInit`: `setup()` exists only on
+  `PostgresSaver`, so calling it from the consumer would pin that consumer to
+  Postgres. `AgentService` sees only `BaseCheckpointSaver`, which is what lets
+  a test swap in `MemorySaver`.
 - Two ownership zones in one Postgres: checkpointer tables are
   framework-owned (never queried directly), domain tables
   (`Quiz`, `Question`, `Option`, `Attempt`, `Answer`) are Prisma-owned.
