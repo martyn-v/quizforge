@@ -22,7 +22,7 @@ quality decisions get made.
   - [x] `ScoringService`: pure function, no I/O. Three modes behind `SCORING_MODE`; an unknown mode fails at startup
     - [x] Validates that every selected option belongs to the question being scored. The FK on `AnswerSelection.optionId` buys existence, not membership, and a valid option from a different question would otherwise score silently. This is also the re-prompt path in the interrupt loop, so it is needed either way
   - Deferred to Phase 2: `QuizModule` and the callable surface on `AgentService`. Both describe a graph that has no nodes yet, so their shape follows from the nodes and not the reverse
-- [ ] Provider seams via DI tokens: LLM provider (Groq/Ollama swap by config), generation strategy interface
+- [x] Provider seams via DI tokens: LLM provider (Groq/Ollama swap by config), generation strategy interface. The generation token currently resolves to an enum value and not to an implementation, so a consumer has to switch on it. The registry pattern from `MULTIPLE_CHOICE_SCORING_STRATEGY` closes that, and the work waits until the generation node exists
 
 ## Phase 2: The graph (2 to 3 hours)
 
