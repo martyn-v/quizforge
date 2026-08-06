@@ -2,6 +2,10 @@ import { BaseCheckpointSaver, StateGraph } from "@langchain/langgraph";
 import { Injectable, OnModuleInit, Inject } from "@nestjs/common";
 import { LLM_PROVIDER } from "./llm.provider";
 import { CHECKPOINTER } from "./checkpointer.provider";
+import {
+  GENERATION_STRATEGY_PROVIDER,
+  GenerationStrategy,
+} from "./generation-strategy.provider";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { QuizState } from "./state";
 
@@ -25,6 +29,8 @@ export class AgentService implements OnModuleInit {
   constructor(
     @Inject(CHECKPOINTER) private readonly checkpointer: BaseCheckpointSaver,
     @Inject(LLM_PROVIDER) private llm: BaseChatModel,
+    @Inject(GENERATION_STRATEGY_PROVIDER)
+    private _generationStrategy: GenerationStrategy,
   ) {}
 
   onModuleInit() {

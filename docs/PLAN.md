@@ -17,11 +17,11 @@ quality decisions get made.
 - [x] docker-compose with a single Postgres instance
 - [x] process-compose dev orchestration: `infra` (docker compose), `server`, `web` as separately restartable processes with readiness gates, behind `pnpm dev`
 - [x] Prisma schema: `Quiz`, `Question`, `Option`, `Attempt`, `Answer` (plus `AnswerSelection`). Delete rules follow "cascade ownership, restrict history"; `Attempt.startedAt` has no default because the row is written at finalize
-- [ ] Nest modules:
-  - [ ] `AgentModule`: compiles the graph once at bootstrap, exposes it as an injectable provider. The checkpointer sits behind a `CHECKPOINTER` token typed as `BaseCheckpointSaver`, with `setup()` awaited in its async factory rather than in `onModuleInit`, so nothing downstream is pinned to Postgres
-  - [ ] `QuizModule`: thin controllers over the graph
-  - [ ] `ScoringService`: pure function, no I/O
-    - [ ] Validates that every selected option belongs to the question being scored. The FK on `AnswerSelection.optionId` buys existence, not membership, and a valid option from a different question would otherwise score silently. This is also the re-prompt path in the interrupt loop, so it is needed either way
+- [x] Nest modules:
+  - [x] `AgentModule`: compiles the graph once at bootstrap. The checkpointer sits behind a `CHECKPOINTER` token typed as `BaseCheckpointSaver`, with `setup()` awaited in its async factory rather than in `onModuleInit`, so nothing downstream is pinned to Postgres
+  - [x] `ScoringService`: pure function, no I/O. Three modes behind `SCORING_MODE`; an unknown mode fails at startup
+    - [x] Validates that every selected option belongs to the question being scored. The FK on `AnswerSelection.optionId` buys existence, not membership, and a valid option from a different question would otherwise score silently. This is also the re-prompt path in the interrupt loop, so it is needed either way
+  - Deferred to Phase 2: `QuizModule` and the callable surface on `AgentService`. Both describe a graph that has no nodes yet, so their shape follows from the nodes and not the reverse
 - [ ] Provider seams via DI tokens: LLM provider (Groq/Ollama swap by config), generation strategy interface
 
 ## Phase 2: The graph (2 to 3 hours)
@@ -42,6 +42,8 @@ Rules:
 
 Endpoints:
 
+- [ ] `AgentService` exposes a callable surface, not the graph object: `startSession(url)` and `submitAnswer(threadId, selections)`. This is the boundary that strips `isCorrect`, so a controller cannot return raw graph state
+- [ ] `QuizModule`: thin controllers over that surface. It imports `AgentModule`, and `AgentModule` imports `ScoringModule` for the `scoreAnswer` node
 - [ ] `POST /sessions`: start graph, run to first interrupt, return question 1 (streaming response, see Phase 3.5)
 - [ ] `POST /sessions/:id/answers`: resume with `Command({ resume })`, return next question or final score (streaming response)
 - [ ] `GET /sessions/:id`: read current state
