@@ -2,7 +2,9 @@
   "name": "quizforge",
   "private": true,
   "scripts": {
-    "dev": "pnpm --parallel --filter server --filter web dev",
+    "dev": "process-compose up",
+    "dev:down": "process-compose down",
+    "dev:raw": "pnpm --parallel --filter server --filter web dev",
     "test": "pnpm --filter server --filter shared test"
   },
   "engines": {

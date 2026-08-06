@@ -14,7 +14,8 @@ quality decisions get made.
 - [x] mise env setup: pin Node + pnpm versions in `mise.toml`, `.env` from example (Ollama gemma4:31b as default provider, Groq as alternative)
 - [x] Scaffold pnpm monorepo: `server` (NestJS), `web` (Vue 3), `shared` (types)
 - [x] Spike file before real code: verify LangGraph JS `interrupt()` / `Command({ resume })`, `PostgresSaver.setup()`, conditional edges, and `streamEvents()` in one throwaway script (the JS API diverges from Python in small ways). Findings: the wedge hazard reproduces (a throw inside the interrupt loop replays the cached resume value forever, re-prompting recovers); node names cannot collide with state channel names
-- [ ] docker-compose with a single Postgres instance
+- [x] docker-compose with a single Postgres instance
+- [x] process-compose dev orchestration: `infra` (docker compose), `server`, `web` as separately restartable processes with readiness gates, behind `pnpm dev`
 - [ ] Prisma schema: `Quiz`, `Question`, `Option`, `Attempt`, `Answer`
 - [ ] Nest modules:
   - [ ] `AgentModule`: compiles the graph once at bootstrap, exposes it as an injectable provider, runs `PostgresSaver.setup()` in `onModuleInit`

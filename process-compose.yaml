@@ -1,0 +1,57 @@
+version: "0.5"
+
+# Dev orchestration: infra, API and web as three independently restartable
+# processes. In the TUI, select a process and press F5 to restart just that
+# one, F6 to stop it, F8 to see its logs.
+
+processes:
+  infra:
+    description: "Postgres via docker compose"
+    command: "docker compose up --remove-orphans"
+    shutdown:
+      command: "docker compose stop"
+      timeout_seconds: 30
+    availability:
+      restart: on_failure
+      max_restarts: 3
+      backoff_seconds: 2
+    readiness_probe:
+      exec:
+        command: >-
+          docker compose exec -T postgres
+          pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-quizforge}
+      initial_delay_seconds: 2
+      period_seconds: 2
+      timeout_seconds: 5
+      failure_threshold: 30
+
+  server:
+    description: "NestJS API on :3000"
+    command: "pnpm --filter server dev"
+    depends_on:
+      infra:
+        condition: process_healthy
+    availability:
+      restart: on_failure
+      backoff_seconds: 2
+    readiness_probe:
+      http_get:
+        host: 127.0.0.1
+        scheme: http
+        path: /health
+        port: 3000
+      initial_delay_seconds: 3
+      period_seconds: 2
+      timeout_seconds: 5
+      failure_threshold: 30
+
+  web:
+    description: "Vue dev server on :5173"
+    command: "pnpm --filter web dev"
+    # only ordering, not a hard gate: the UI still comes up if the API is broken
+    depends_on:
+      server:
+        condition: process_started
+    availability:
+      restart: on_failure
+      backoff_seconds: 2

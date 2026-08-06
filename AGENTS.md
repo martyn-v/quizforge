@@ -14,12 +14,20 @@ if a promise in the README gets cut, the README edit is part of the cut.
 ## Commands
 
 ```
-pnpm dev              # API :3000, web :5173
+pnpm dev              # process-compose: infra + API :3000 + web :5173
+pnpm dev:down         # stop the whole stack
 pnpm test             # unit + journey tests
 pnpm eval             # generation quality scorecard over evals/fixtures
 pnpm prisma migrate dev
-docker compose up -d  # Postgres
+docker compose up -d  # Postgres on its own, without process-compose
 ```
+
+`pnpm dev` runs the three processes under process-compose so each can be
+restarted and watched on its own: in the TUI, F5 restarts the selected
+process, F6 stops it, F8 shows its log. `server` waits for Postgres to pass
+`pg_isready`; `web` only waits for `server` to start, so the UI still comes
+up when the API is broken. Use `pnpm dev:raw` to bypass process-compose
+and run the two dev servers directly.
 
 ## Hard rules
 
