@@ -1,0 +1,11 @@
+{
+  "name": "quizforge",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter server --filter web dev",
+    "test": "pnpm --filter server --filter shared test"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

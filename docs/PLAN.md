@@ -12,7 +12,7 @@ quality decisions get made.
 ## Phase 1: Skeleton (2 to 3 hours)
 
 - [x] mise env setup: pin Node + pnpm versions in `mise.toml`, `.env` from example (Ollama gemma4:31b as default provider, Groq as alternative)
-- [ ] Scaffold pnpm monorepo: `server` (NestJS), `web` (Vue 3), `shared` (types)
+- [x] Scaffold pnpm monorepo: `server` (NestJS), `web` (Vue 3), `shared` (types)
 - [ ] Spike file before real code: verify LangGraph JS `interrupt()` / `Command({ resume })`, `PostgresSaver.setup()`, conditional edges, and `streamEvents()` in one throwaway script (the JS API diverges from Python in small ways)
 - [ ] docker-compose with a single Postgres instance
 - [ ] Prisma schema: `Quiz`, `Question`, `Option`, `Attempt`, `Answer`
