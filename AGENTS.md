@@ -85,3 +85,10 @@ implementing something else.
 - Tests colocated with the code they test; scoring tests are the floor,
   keep them green.
 - No em dashes in any prose or docs.
+- Write all documentation in Simplified Technical English (ASD-STE100).
+  This applies to `README.md`, files in `docs/`, JSDoc blocks and code
+  comments. Use the active voice. Keep descriptive sentences to 25 words
+  or fewer, and instructions to 20 words or fewer. Give one instruction
+  per sentence. Use the same word for the same thing every time. Keep
+  paragraphs to 6 sentences or fewer. Do not use idioms or figures of
+  speech.

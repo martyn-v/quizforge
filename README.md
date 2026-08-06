@@ -1,16 +1,16 @@
 # Quizforge
 
-**A quiz agent that reads a document and tests you on it.** Point it at any
-Markdown URL and the agent generates a short test, runs the session
-question by question, scores your answers, and stores the full record.
-Built as a small production-ready application, not a proof of concept.
+**A quiz agent that reads a document and asks you questions about it.** Give
+the agent a Markdown URL. The agent generates a short test. It then runs the
+session question by question, calculates your score, and stores the full
+record. This is a small production application. It is not a proof of concept.
 
-Node.js/TypeScript throughout: NestJS API with an embedded LangGraph agent,
-Vue 3 web UI, Postgres for persistence.
+The application uses Node.js and TypeScript. It has a NestJS API with an
+embedded LangGraph agent, a Vue 3 web interface, and Postgres for storage.
 
 ## How a session moves
 
-The whole session is one stateful LangGraph graph, checkpointed to
+One LangGraph graph controls the full session. The graph is checkpointed to
 Postgres:
 
 ```
@@ -24,200 +24,211 @@ fetchSource -> generateQuestions -> askQuestion -> scoreAnswer
                                                     finalize
 ```
 
-The pause at **askQuestion** is durable. The node calls `interrupt()` with
-the question payload, state checkpoints, and the process can restart
-between question and answer. The answer arrives as a
-`Command({ resume: selectedOptionIds })` and the graph picks up where it
-stopped. The REST API is a thin driver over this graph:
+The **askQuestion** node makes a durable pause. The node calls `interrupt()`
+with the question payload. The graph then writes a checkpoint. The process can
+stop and start again between the question and the answer. The answer arrives
+as a `Command({ resume: selectedOptionIds })`. The graph then continues from
+the checkpoint. The REST API only starts and resumes the graph:
 
-| Endpoint                     | Role                                                                |
-| ---------------------------- | ------------------------------------------------------------------- |
-| `POST /sessions`             | Start the graph, run to the first interrupt, return question 1      |
-| `POST /sessions/:id/answers` | Resume with the answer, return the next question or the final score |
-| `GET /sessions/:id`          | Read current session state                                          |
+| Endpoint                     | Role                                                             |
+| ---------------------------- | ---------------------------------------------------------------- |
+| `POST /sessions`             | Starts the graph, runs to the first pause, returns question 1     |
+| `POST /sessions/:id/answers` | Resumes with the answer, returns the next question or the score  |
+| `GET /sessions/:id`          | Returns the current session state                                |
 
 The `thread_id` is the session id.
 
-Both POST endpoints stream. The response is SSE carrying a typed event
-union (`progress | token | question | result`, defined once in `shared`
-and imported by both sides): node-level progress while the graph runs,
-framing tokens as the agent introduces a question, then the structured
-question or final result as a whole payload when the interrupt lands.
-Partial JSON never crosses the wire, and since the browser's native
-`EventSource` is GET-only, the web client reads the stream via `fetch`
-with a `ReadableStream` parser. `?stream=false` returns plain JSON for
-curl and tests.
+Both POST endpoints send a stream. The response is SSE with a typed event
+union (`progress | token | question | result`). The `shared` package defines
+this union once, and the API and the web interface both import it. The stream
+sends node progress while the graph runs. It then sends the framing tokens
+that introduce a question. It then sends the question or the final result as
+one complete payload. The API never sends incomplete JSON. The native
+`EventSource` of the browser accepts GET requests only. The web client
+therefore reads the stream with `fetch` and a `ReadableStream` parser. Add
+`?stream=false` to get plain JSON for curl and for tests.
 
 ## Scoring
 
-Per question:
+Each question has a score:
 
-- 4 points for a correct answer
-- 0 points for a wrong answer
-- For multi-answer questions, the number of correctly selected answers
-  (0 to 4)
+- A correct answer scores 4 points
+- A wrong answer scores 0 points
+- A multi-answer question scores the number of correct selections (0 to 4)
 
-The final score is a weighted average of the individual scores. Weights
-follow a geometric sequence starting at 1.0 with ratio 1.1, so question n
-carries weight 1.1^(n-1) and later questions count more:
+The final score is the weighted average of the question scores. The weights
+are a geometric sequence. The sequence starts at 1.0 and has a ratio of 1.1.
+Question n therefore has the weight 1.1^(n-1), and the later questions have
+more effect on the final score:
 
 ```
 final = sum(score_i * 1.1^(i-1)) / sum(1.1^(i-1))
 ```
 
-The result lands on the same 0 to 4 scale as individual answers.
+The final score uses the same scale of 0 to 4 as the question scores.
 
-Scoring is a pure function with no I/O and no model involvement, covered
-by unit tests. The LLM generates questions; deterministic code grades
-them. Intelligence ends where grading begins.
+Scoring is a pure function. It does no I/O and it does not use the model. Unit
+tests cover it. The LLM generates the questions. Deterministic code calculates
+the scores.
 
-**A note on the multi-answer rule.** As specified, the rule rewards
-correct selections and never penalizes wrong ones, which makes "select
-everything" the optimal strategy on multi-answer questions. In
-precision/recall terms it is a recall-only metric. The spec rule is the
-default; a penalized variant (`max(0, correct - wrong)` scaled to 4) is
-available behind the `SCORING_MODE` config flag.
+**A note about the multi-answer rule.** The specified rule counts correct
+selections, and it ignores wrong selections. A user who selects all the
+options therefore gets the maximum score. The rule measures recall, but it
+does not measure precision. The specified rule is the default. The
+`SCORING_MODE` configuration variable selects a different rule. The
+`penalized` rule uses `max(0, correct - wrong)` on a scale of 0 to 4.
 
 ## Assumptions
 
-Decisions made where the requirements left room, each defensible and each
-reversible:
+The requirements permit more than one interpretation in some areas. These are
+the decisions, and each decision is reversible:
 
-- **"The agent system should run the quiz" is read strongly.** The agent
-  is not just the question generator with a conventional app around it.
-  The full session lifecycle (generate, ask, collect, score, finalize) is
-  one graph with human-in-the-loop interrupts. The weak reading (agentic
-  generation, plain CRUD for the rest) would also satisfy the letter of
-  the spec but gives up durability and a coherent data-flow story.
-- **Question count is configurable within 5 to 8**, defaulting to 6. The
-  generator is instructed to mix single-answer and multi-answer questions
-  so both scoring paths are exercised.
-- **Every question has exactly 4 options.** Multi-answer questions have
-  2 or 3 correct options; a multi-answer question where all 4 are correct
-  is rejected at validation because it cannot distinguish knowledge from
-  the select-everything strategy.
-- **Correct answers never leave the server.** The interrupt payload and
-  every API response strip the `isCorrect` flags. Scoring happens
-  server-side on submission.
-- **GitHub blob URLs are accepted and converted** to their
-  raw.githubusercontent.com form. Any URL that returns Markdown or plain
-  text works.
-- **Source documents are pruned, not chunked, by default.** READMEs fit
-  comfortably in context after stripping badges, HTML, and link noise.
-  The chunked strategy exists for larger documents (see Strategies).
+- **The agent runs the full quiz.** The agent is more than a question
+  generator inside a conventional application. One graph controls the full
+  session lifecycle: generate, ask, collect, score and finalize. It uses
+  human-in-the-loop pauses. A weaker interpretation is an agent for generation
+  only, with CRUD for the other steps. That interpretation also meets the
+  requirements, but it loses durability and a clear data flow.
+- **The number of questions is configurable between 5 and 8.** The default is
+  6. The generator receives an instruction to mix single-answer and
+  multi-answer questions. Both scoring paths therefore get exercise.
+- **Each question has exactly 4 options.** A multi-answer question has 2 or 3
+  correct options. Validation rejects a multi-answer question that has 4
+  correct options. Such a question cannot show the difference between
+  knowledge and the select-everything strategy.
+- **Correct answers stay on the server.** The interrupt payload and each API
+  response remove the `isCorrect` flags. The server calculates the score when
+  it receives the answer.
+- **The API accepts GitHub blob URLs.** It converts them to the
+  raw.githubusercontent.com form. Any URL that returns Markdown or plain text
+  is acceptable.
+- **The default is to prune source documents, not to divide them.** A README
+  fits in the context window after the removal of badges, HTML and link noise.
+  The `chunked` strategy is available for larger documents. Refer to
+  Strategies.
 
 ## Patterns
 
-The parts of the design that carry weight:
+These are the important parts of the design:
 
-- **Embedded agent, not an agent service.** LangGraph JS is a library, so
-  the graph compiles once at bootstrap inside a Nest `AgentModule` and is
-  injected where needed. Monolith by default; splitting the agent out
-  earns its complexity only with a different scaling profile, different
-  language dependencies, or a different owning team. None apply to a quiz
-  app.
-- **Two ownership zones, one Postgres.** The checkpointer tables belong
-  to `@langchain/langgraph-checkpoint-postgres` (framework-managed schema,
-  created by `setup()` at module init) and hold serialized graph state so
-  sessions survive restarts. The domain tables (`Quiz`, `Question`,
-  `Option`, `Attempt`, `Answer`) belong to Prisma and are the durable,
-  queryable record, written by generation and by the finalize node. You
-  do not query framework checkpoints for reporting, and you do not
-  rebuild resumability on top of relational tables when the framework
-  provides it.
-- **Domain writes are lazy; the checkpointer owns live runs.** Generation
-  persists Quiz, Question, and Option eagerly (a definition is complete
-  the moment it exists), but nothing run-side touches the domain tables
-  until `finalize` writes Attempt and all Answers in one transaction.
-  Mid-quiz durability is already the checkpointer's job; eager Answer
-  writes would store the same fact twice and leave orphan rows on
-  abandoned sessions. Trade-off: no SQL reporting on in-progress
-  attempts, which nothing here needs.
-- **Human input inside an interrupt loop must never raise.** LangGraph
-  caches the resume value in the checkpoint and replays it on retry, so
-  an exception thrown on a malformed answer wedges the thread
-  permanently. Every invalid submission (unknown option ids, wrong
-  cardinality, malformed body) becomes a re-prompt with the reason
-  attached. The only exit from a question is a valid answer.
-- **Structured output with one repair round.** Question generation is
-  bound to a Zod schema. A validation failure feeds the errors back to
-  the model once; a second failure fails the session loudly rather than
-  serving a malformed quiz.
-- **Stream progress and prose, land payloads whole.** Node updates and
-  framing tokens stream token by token; questions and results arrive as
-  complete validated objects. Streaming partial structured output would
-  mean parsing half-formed JSON on the client and would put the raw
-  generation, correct flags included, on the wire.
-- **Seams via DI tokens.** The LLM provider (Groq by default, Ollama for
-  local runs) and the generation strategy sit behind interfaces, swapped
-  by configuration, not code edits.
+- **The agent is embedded. It is not a separate service.** LangGraph JS is a
+  library. The graph therefore compiles one time at startup, in the Nest
+  `AgentModule`, and Nest injects it where it is necessary. A monolith is the
+  default. A separate agent service is correct only with a different scaling
+  profile, different language dependencies, or a different owning team. None
+  of these conditions apply to a quiz application.
+- **One Postgres holds two ownership zones.** The checkpointer tables belong
+  to `@langchain/langgraph-checkpoint-postgres`. That package manages their
+  schema and creates them with `setup()`. They hold serialized graph state, so
+  the sessions continue after a restart. The domain tables (`Quiz`,
+  `Question`, `Option`, `Attempt`, `Answer`) belong to Prisma. They are the
+  durable record for queries. Generation and the finalize node write them. Do
+  not query the framework checkpoints for reports. Do not build session
+  recovery on the relational tables, because the framework supplies it.
+- **Domain writes are late. The checkpointer holds the live session.**
+  Generation writes Quiz, Question and Option immediately, because a
+  definition is complete when it exists. Nothing else writes to the domain
+  tables until the `finalize` node writes the Attempt and all the Answers in
+  one transaction. The checkpointer already makes the session durable.
+  Immediate Answer writes would store the same fact two times. They would also
+  leave unused rows for abandoned sessions. The cost is that SQL reports
+  cannot see sessions in progress. Nothing here needs that.
+- **Human input in an interrupt loop must never raise an exception.**
+  LangGraph keeps the resume value in the checkpoint and sends it again on a
+  retry. An exception on a malformed answer therefore makes the thread
+  permanently unusable. Each invalid answer becomes a new prompt with the
+  reason. This includes unknown option ids, the wrong number of selections and
+  a malformed body. Only a valid answer completes a question.
+- **Structured output with one repair attempt.** A Zod schema controls
+  question generation. On a validation failure, the model receives the errors
+  one time. A second failure stops the session with an error. The application
+  does not serve a malformed quiz.
+- **Progress and prose stream. Payloads arrive complete.** Node updates and
+  framing tokens stream token by token. Questions and results arrive as
+  complete validated objects. Streamed structured output would make the client
+  parse incomplete JSON. It would also send the raw generation, which contains
+  the correct answers.
+- **DI tokens make the seams.** The LLM provider and the generation strategy
+  are behind interfaces. Configuration selects them, not a code change. The
+  default provider is Groq. Ollama is available for local runs.
 
 ## Strategies
 
-Question generation is pluggable behind a single interface:
+One interface controls question generation:
 
-| Strategy                | Approach                                                                                 |
-| ----------------------- | ---------------------------------------------------------------------------------------- |
-| `single-pass` (default) | One generation call over the pruned document                                             |
-| `chunked`               | Split the document by section, generate per chunk, dedupe and sample to the target count |
+| Strategy                | Approach                                                                     |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| `single-pass` (default) | Makes one generation call for the pruned document                            |
+| `chunked`               | Divides the document by section, generates for each part, then removes duplicates and selects the target number |
 
-Selected via `GENERATION_STRATEGY`. Adding a strategy is one class and one
-registry entry.
+The `GENERATION_STRATEGY` variable selects the strategy. To add a strategy,
+write one class and add one registry entry.
 
 ## Evals
 
-Prompt and strategy decisions are made against a scorecard, not by
-eyeballing output. `pnpm eval` runs every generation strategy over a
-fixture set of three READMEs with deliberately different shapes (library,
-application, sparse) and scores each generated quiz on two axes plus
-hygiene:
+A scorecard controls the decisions about prompts and strategies. Do not
+examine the output and make a judgement. The `pnpm eval` command runs each
+generation strategy against a fixture set. The set contains three READMEs with
+different shapes: a library, an application and a sparse document. The command
+gives each generated quiz a score on two axes, and it also checks hygiene:
 
-- **Answerability** (precision): is each question answerable from the
-  source document alone, with no hallucinated facts, and exactly one
-  defensible answer where one is claimed
-- **Coverage** (recall): what fraction of the document's key topics the
-  quiz touches
-- **Distractor plausibility**: wrong options should be wrong, not absurd
+- **Answerability** (precision): the source document alone must answer each
+  question. The question must contain no invented facts. A single-answer
+  question must have exactly one defensible answer
+- **Coverage** (recall): the proportion of the key topics of the document that
+  the quiz includes
+- **Distractor plausibility**: a wrong option must be wrong, but it must not
+  be absurd
 
-The judge is an LLM; structural validity is not its job. Option counts,
-question counts, and multi-answer cardinality are checked
-deterministically before the judge ever runs. Results are logged to
-Langfuse as dataset runs, so prompt changes come with before/after
-scores. The judge grades the generator, never the user.
+An LLM is the judge. The judge does not check structural validity.
+Deterministic checks control the number of options, the number of questions
+and the number of correct options. These checks run before the judge. The
+application sends the results to Langfuse as dataset runs. A prompt change
+therefore has a score from before the change and after it. The judge gives a
+score to the generator. It never gives a score to the user.
 
 ## Quickstart
 
 ```
-mise install                  # pinned Node + pnpm from mise.toml
-docker compose up -d          # Postgres
+mise install                  # installs the Node and pnpm versions from mise.toml
+docker compose up -d          # starts Postgres
 cp .env.example .env          # add your GROQ_API_KEY
 pnpm install
-pnpm prisma migrate dev       # domain tables (checkpointer creates its own)
+pnpm prisma migrate dev       # creates the domain tables
 pnpm dev                      # API on :3000, web on :5173
-pnpm eval                     # optional: score generation quality on the fixture set
+pnpm eval                     # optional: gives generation quality a score
 ```
 
-Open the web UI, paste a Markdown URL (two known-good examples are in
-`.env.example`), and take the quiz.
+The checkpointer creates its own tables. Open the web interface. Give it a
+Markdown URL. The `.env.example` file contains two examples. Then answer the
+questions.
 
 ## Observability
 
-Generation calls are traced to Langfuse when `LANGFUSE_*` keys are set in
-the environment. Traces carry the source URL, the strategy, token usage,
-and validation repair rounds.
+The application sends traces of the generation calls to Langfuse. To enable
+this, set the `LANGFUSE_*` variables in the environment. A trace contains the
+source URL, the strategy, the token usage and the number of repair attempts.
 
 ## Known limitations, deliberate at this scope
 
-- **No authentication.** Sessions are addressable by anyone holding the
-  session id.
-- **`GET /sessions/:id` reads graph state, not domain tables.** Fine for
-  driving the UI; reporting queries belong on the Prisma side and only
-  the completed attempt is written there.
-- **Question quality is eval-informed, not eval-gated.** The scorecard
-  drives prompt iteration during development, but a low-scoring quiz is
-  not blocked at generation time; runtime enforcement is limited to the
-  deterministic structural checks. Gating live generation on a judge
-  call would double latency and cost per session for marginal benefit at
-  this scale.
-- **One process.** The Postgres checkpointer makes horizontal scaling
-  possible, but nothing here needs it yet.
+- **There is no authentication.** Any person with the session id can use the
+  session.
+- **`GET /sessions/:id` reads the graph state, not the domain tables.** This
+  is sufficient for the web interface. Reports must use the Prisma tables,
+  which contain completed attempts only.
+- **Evals inform question quality. They do not control it.** The scorecard
+  controls prompt changes during development. Generation does not reject a
+  quiz with a low score. At run time, only the deterministic structural checks
+  apply. A judge call during generation would double the latency and the cost
+  of each session. The benefit at this scale is too small.
+- **The application runs in one process.** The Postgres checkpointer permits
+  horizontal scaling, but nothing here needs it.
+- **`ScoringService.scoreQuestion` still validates the answer.** Validation
+  and scoring are two different tasks, and they occur at different times.
+  Validation must occur immediately after the answer arrives, so `askQuestion`
+  can catch the error and ask the question again. Scoring can occur later. One
+  method for both tasks is acceptable while `scoreAnswer` runs after each
+  answer. It becomes incorrect if scoring moves to `finalize`, because the
+  user then learns about a bad answer after the last question. The correction
+  is a separate `validateAnswer` method. This work waits until the node
+  exists.
