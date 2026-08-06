@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
-import { checkpointerProvider } from "./checkpointer.provider";
-import { llmProvider } from "./llm.provider";
-import { generationStrategyProvider } from "./generation-strategy.provider";
+import { checkpointerProvider } from "./providers/checkpointer.provider";
+import { llmProvider } from "./providers/llm.provider";
+import { generationStrategyProvider } from "./providers/generation-strategy.provider";
 import { AgentService } from "./agent.service";
 
 @Module({

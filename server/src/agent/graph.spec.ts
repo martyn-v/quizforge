@@ -1,0 +1,79 @@
+import { FakeListChatModel } from "@langchain/core/utils/testing";
+import { MemorySaver } from "@langchain/langgraph";
+import { buildQuizGraph } from "./graph";
+
+/**
+ * Journey tests. They run the compiled graph, so they cover the nodes and the
+ * edges between them. Only the model and the network are substituted.
+ *
+ * MemorySaver keeps the real checkpoint behaviour, which interrupt() and
+ * Command({ resume }) depend on, without a database.
+ */
+
+const BLOB_URL = "https://github.com/pipecat-ai/pipecat/blob/main/README.md";
+const RAW_URL =
+  "https://raw.githubusercontent.com/pipecat-ai/pipecat/main/README.md";
+
+/** Answers every request with the same body. The tests never reach GitHub. */
+function stubFetch(body: string) {
+  const fetchMock = vi.fn().mockResolvedValue(new Response(body));
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+function buildTestGraph(modelResponses: string[] = []) {
+  return buildQuizGraph(
+    new FakeListChatModel({ responses: modelResponses }),
+    new MemorySaver(),
+  );
+}
+
+let threadCount = 0;
+
+/** A fresh thread per run, so one test cannot resume another test's state. */
+function newThread() {
+  threadCount += 1;
+  return { configurable: { thread_id: `journey-${threadCount}` } };
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("the quiz graph", () => {
+  it("converts the url, fetches the source, and puts both in the state", async () => {
+    stubFetch("# Title");
+
+    const result = await buildTestGraph().invoke(
+      { readme_url: BLOB_URL },
+      newThread(),
+    );
+
+    // The whole state is asserted, not one key. A new node that adds a
+    // channel then fails here, which is the reminder to cover it.
+    expect(result).toEqual({
+      readme_url: RAW_URL,
+      source: "# Title",
+    });
+  });
+
+  it("requests the raw url, never the blob url", async () => {
+    const fetchMock = stubFetch("# Title");
+
+    await buildTestGraph().invoke({ readme_url: BLOB_URL }, newThread());
+
+    expect(fetchMock).toHaveBeenCalledWith(RAW_URL, expect.anything());
+  });
+
+  it("fails the run when the url is not accepted", async () => {
+    const fetchMock = stubFetch("# Title");
+
+    await expect(
+      buildTestGraph().invoke(
+        { readme_url: "https://example.com/README.md" },
+        newThread(),
+      ),
+    ).rejects.toThrow();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
