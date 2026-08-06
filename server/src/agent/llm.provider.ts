@@ -2,7 +2,7 @@ import { ChatOllama } from "@langchain/ollama";
 import { ChatGroq } from "@langchain/groq";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
-import { Provider } from "@nestjs/common";
+import type { FactoryProvider } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 export const LLM_PROVIDER = Symbol("LLM_PROVIDER");
@@ -19,7 +19,9 @@ const buildGroqModel = (config: ConfigService): ChatGroq => {
   });
 };
 
-export const llmProvider: Provider = {
+// `satisfies` rather than a type annotation, so the exact factory signature
+// survives for callers. See generation-strategy.provider.ts for the reasons.
+export const llmProvider = {
   provide: LLM_PROVIDER,
   useFactory: (config: ConfigService): BaseChatModel => {
     const provider = config.get<string>("LLM_PROVIDER", "ollama");
@@ -33,4 +35,4 @@ export const llmProvider: Provider = {
     }
   },
   inject: [ConfigService],
-};
+} satisfies FactoryProvider<BaseChatModel>;
