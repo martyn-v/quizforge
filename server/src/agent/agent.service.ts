@@ -27,7 +27,7 @@ export class AgentService implements OnModuleInit {
     @Inject(LLM_PROVIDER) private llm: BaseChatModel,
   ) {}
 
-  async onModuleInit() {
+  onModuleInit() {
     this.graph = buildQuizGraph(this.llm, this.checkpointer);
   }
 }

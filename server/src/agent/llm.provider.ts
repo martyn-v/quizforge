@@ -9,20 +9,20 @@ export const LLM_PROVIDER = Symbol("LLM_PROVIDER");
 
 const buildOllamaModel = (config: ConfigService): ChatOllama => {
   return new ChatOllama({
-    model: config.get("OLLAMA_MODEL", "gemma4:31b"),
+    model: config.get<string>("OLLAMA_MODEL", "gemma4:31b"),
   });
 };
 
 const buildGroqModel = (config: ConfigService): ChatGroq => {
   return new ChatGroq({
-    model: config.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
+    model: config.get<string>("GROQ_MODEL", "llama-3.3-70b-versatile"),
   });
 };
 
 export const llmProvider: Provider = {
   provide: LLM_PROVIDER,
   useFactory: (config: ConfigService): BaseChatModel => {
-    const provider = config.get("LLM_PROVIDER", "ollama");
+    const provider = config.get<string>("LLM_PROVIDER", "ollama");
     switch (provider) {
       case "ollama":
         return buildOllamaModel(config);
