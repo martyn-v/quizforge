@@ -99,9 +99,13 @@ the decisions, and each decision is reversible:
 - **Correct answers stay on the server.** The interrupt payload and each API
   response remove the `isCorrect` flags. The server calculates the score when
   it receives the answer.
-- **The API accepts GitHub blob URLs.** It converts them to the
-  raw.githubusercontent.com form. Any URL that returns Markdown or plain text
-  is acceptable.
+- **The source must be a GitHub URL.** The API accepts a GitHub blob URL and
+  converts it to the raw.githubusercontent.com form. The node refuses any
+  other host. The server makes the request, so an unrestricted URL lets a
+  user reach an address that only the server can reach, such as a cloud
+  metadata endpoint or an internal port. The restriction also rejects a
+  redirect away from the permitted host. Any file on that host is acceptable,
+  not only `README.md`.
 - **The default is to prune source documents, not to divide them.** A README
   fits in the context window after the removal of badges, HTML and link noise.
   The `chunked` strategy is available for larger documents. Refer to
@@ -232,3 +236,13 @@ source URL, the strategy, the token usage and the number of repair attempts.
   user then learns about a bad answer after the last question. The correction
   is a separate `validateAnswer` method. This work waits until the node
   exists.
+- **HTTP tests replace `fetch`. They do not intercept it.** The tests put a
+  stub in the place of the global `fetch`, so the real `fetch` never runs.
+  The responses are real `Response` objects, so the status and the body
+  behave correctly, but the request itself is not exercised. Headers,
+  redirects and cancellation are therefore untested. `fetchSource` sends a
+  URL and no options, so there is nothing to test yet. An interceptor such
+  as MSW runs the real `fetch` and permits those tests. MSW also runs in the
+  browser, so the web package can use the same request handlers. Add it when
+  `fetchSource` takes options, or when the web package needs its first
+  request test.

@@ -4,3 +4,11 @@ export class InvalidAnswerError extends Error {
     this.name = "InvalidAnswerError";
   }
 }
+
+/** The source document could not be read. */
+export class FetchSourceError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "FetchSourceError";
+  }
+}

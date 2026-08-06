@@ -1,4 +1,9 @@
-import { BaseCheckpointSaver, StateGraph } from "@langchain/langgraph";
+import {
+  BaseCheckpointSaver,
+  END,
+  START,
+  StateGraph,
+} from "@langchain/langgraph";
 import { Injectable, OnModuleInit, Inject } from "@nestjs/common";
 import { LLM_PROVIDER } from "./llm.provider";
 import { CHECKPOINTER } from "./checkpointer.provider";
@@ -8,6 +13,7 @@ import {
 } from "./generation-strategy.provider";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { QuizState } from "./state";
+import { makeFetchSourceNode } from "./nodes/fetch-source";
 
 // Module level and deliberately unannotated. Every addNode widens the node-name
 // type parameter, so the compiled graph's type changes shape as the graph grows;
@@ -17,7 +23,11 @@ function buildQuizGraph(
   _llm: BaseChatModel,
   checkpointer: BaseCheckpointSaver,
 ) {
-  return new StateGraph(QuizState).compile({ checkpointer });
+  return new StateGraph(QuizState)
+    .addNode("fetchSource", makeFetchSourceNode())
+    .addEdge(START, "fetchSource")
+    .addEdge("fetchSource", END)
+    .compile({ checkpointer });
 }
 
 type QuizGraph = ReturnType<typeof buildQuizGraph>;
