@@ -30,11 +30,11 @@ between question and answer. The answer arrives as a
 `Command({ resume: selectedOptionIds })` and the graph picks up where it
 stopped. The REST API is a thin driver over this graph:
 
-| Endpoint | Role |
-| --- | --- |
-| `POST /sessions` | Start the graph, run to the first interrupt, return question 1 |
+| Endpoint                     | Role                                                                |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `POST /sessions`             | Start the graph, run to the first interrupt, return question 1      |
 | `POST /sessions/:id/answers` | Resume with the answer, return the next question or the final score |
-| `GET /sessions/:id` | Read current session state |
+| `GET /sessions/:id`          | Read current session state                                          |
 
 The `thread_id` is the session id.
 
@@ -125,6 +125,14 @@ The parts of the design that carry weight:
   do not query framework checkpoints for reporting, and you do not
   rebuild resumability on top of relational tables when the framework
   provides it.
+- **Domain writes are lazy; the checkpointer owns live runs.** Generation
+  persists Quiz, Question, and Option eagerly (a definition is complete
+  the moment it exists), but nothing run-side touches the domain tables
+  until `finalize` writes Attempt and all Answers in one transaction.
+  Mid-quiz durability is already the checkpointer's job; eager Answer
+  writes would store the same fact twice and leave orphan rows on
+  abandoned sessions. Trade-off: no SQL reporting on in-progress
+  attempts, which nothing here needs.
 - **Human input inside an interrupt loop must never raise.** LangGraph
   caches the resume value in the checkpoint and replays it on retry, so
   an exception thrown on a malformed answer wedges the thread
@@ -148,10 +156,10 @@ The parts of the design that carry weight:
 
 Question generation is pluggable behind a single interface:
 
-| Strategy | Approach |
-| --- | --- |
-| `single-pass` (default) | One generation call over the pruned document |
-| `chunked` | Split the document by section, generate per chunk, dedupe and sample to the target count |
+| Strategy                | Approach                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| `single-pass` (default) | One generation call over the pruned document                                             |
+| `chunked`               | Split the document by section, generate per chunk, dedupe and sample to the target count |
 
 Selected via `GENERATION_STRATEGY`. Adding a strategy is one class and one
 registry entry.

@@ -16,11 +16,12 @@ quality decisions get made.
 - [x] Spike file before real code: verify LangGraph JS `interrupt()` / `Command({ resume })`, `PostgresSaver.setup()`, conditional edges, and `streamEvents()` in one throwaway script (the JS API diverges from Python in small ways). Findings: the wedge hazard reproduces (a throw inside the interrupt loop replays the cached resume value forever, re-prompting recovers); node names cannot collide with state channel names
 - [x] docker-compose with a single Postgres instance
 - [x] process-compose dev orchestration: `infra` (docker compose), `server`, `web` as separately restartable processes with readiness gates, behind `pnpm dev`
-- [ ] Prisma schema: `Quiz`, `Question`, `Option`, `Attempt`, `Answer`
+- [x] Prisma schema: `Quiz`, `Question`, `Option`, `Attempt`, `Answer` (plus `AnswerSelection`). Delete rules follow "cascade ownership, restrict history"; `Attempt.startedAt` has no default because the row is written at finalize
 - [ ] Nest modules:
   - [ ] `AgentModule`: compiles the graph once at bootstrap, exposes it as an injectable provider, runs `PostgresSaver.setup()` in `onModuleInit`
   - [ ] `QuizModule`: thin controllers over the graph
   - [ ] `ScoringService`: pure function, no I/O
+    - [ ] Validates that every selected option belongs to the question being scored. The FK on `AnswerSelection.optionId` buys existence, not membership, and a valid option from a different question would otherwise score silently. This is also the re-prompt path in the interrupt loop, so it is needed either way
 - [ ] Provider seams via DI tokens: LLM provider (Groq/Ollama swap by config), generation strategy interface
 
 ## Phase 2: The graph (2 to 3 hours)

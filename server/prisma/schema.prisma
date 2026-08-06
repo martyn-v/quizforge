@@ -1,0 +1,107 @@
+// Domain tables, Prisma-owned. The LangGraph checkpointer owns its own
+// tables in the same database and they are never modelled here: framework
+// zone versus domain zone. See AGENTS.md, "two ownership zones".
+//
+// The connection URL lives in prisma.config.ts, not in this file. That is a
+// Prisma 7 change: `datasource db` no longer takes `url`.
+
+generator client {
+    provider = "prisma-client"
+    output   = "../src/generated/prisma"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Entities go here: Quiz, Question, Option, Attempt, Answer.
+// Then run `pnpm db:migrate` from server/ (or `pnpm prisma migrate dev` from
+// the repo root) to create the migration and regenerate the client.
+// ---------------------------------------------------------------------------
+
+enum QuestionType {
+    SINGLE
+    MULTI
+}
+
+model Quiz {
+    id          String     @id @default(uuid())
+    sourceUrl   String
+    title       String
+    description String?
+    strategy    String // Generation strategy used
+    model       String // LLM that generated it
+    createdAt   DateTime   @default(now())
+    questions   Question[]
+    attempts    Attempt[]
+}
+
+model Question {
+    id       String       @id @default(uuid())
+    quizId   String
+    quiz     Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+    position Int
+    type     QuestionType
+    text     String
+    options  Option[]
+    answers  Answer[]
+
+    @@unique([quizId, position])
+}
+
+model Option {
+    id         String            @id @default(uuid())
+    questionId String
+    question   Question          @relation(fields: [questionId], references: [id], onDelete: Cascade)
+    position   Int
+    text       String
+    isCorrect  Boolean
+    selections AnswerSelection[]
+
+    @@unique([questionId, position])
+}
+
+model Attempt {
+    id          String   @id @default(uuid())
+    quizId      String
+    // history, not owned by the quiz: deleting an attempted quiz must fail
+    quiz        Quiz     @relation(fields: [quizId], references: [id], onDelete: Restrict)
+    threadId    String   @unique
+    finalScore  Float
+    // no default: the row is written at finalize, so now() would record the
+    // finish as the start. The real start time is carried in graph state and
+    // passed in explicitly.
+    startedAt   DateTime
+    completedAt DateTime @default(now())
+    answers     Answer[]
+}
+
+model Answer {
+    id         String            @id @default(uuid())
+    attemptId  String
+    attempt    Attempt           @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+    questionId String
+    // across zones: the answer is history, the question is quiz content
+    question   Question          @relation(fields: [questionId], references: [id], onDelete: Restrict)
+    selections AnswerSelection[]
+    score      Float
+
+    @@unique([attemptId, questionId])
+}
+
+// Composite primary key rather than a surrogate id: selecting the same option
+// twice is then structurally impossible, not merely validated against.
+//
+// The FK on optionId buys existence, not membership. Nothing here stops a
+// selection pointing at a valid option belonging to a different question;
+// ScoringService enforces that, which it must do anyway to drive the
+// re-prompt path in the interrupt loop.
+model AnswerSelection {
+    answerId String
+    answer   Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+    optionId String
+    option   Option @relation(fields: [optionId], references: [id], onDelete: Restrict)
+
+    @@id([answerId, optionId])
+}
