@@ -187,7 +187,7 @@ gives each generated quiz a score on two axes, and it also checks hygiene:
 An LLM is the judge. The judge does not check structural validity.
 Deterministic checks control the number of options, the number of questions
 and the number of correct options. These checks run before the judge. The
-application sends the results to Langfuse as dataset runs. A prompt change
+application sends the results to LangSmith as experiment runs. A prompt change
 therefore has a score from before the change and after it. The judge gives a
 score to the generator. It never gives a score to the user.
 
@@ -209,8 +209,8 @@ questions.
 
 ## Observability
 
-The application sends traces of the generation calls to Langfuse. To enable
-this, set the `LANGFUSE_*` variables in the environment. A trace contains the
+The application sends traces of the generation calls to LangSmith. To enable
+this, set the `LANGSMITH_*` variables in the environment. A trace contains the
 source URL, the strategy, the token usage and the number of repair attempts.
 
 ## Roadmap

@@ -58,14 +58,14 @@ Tests and evals:
   - [ ] LLM-as-judge script scoring each generated quiz on: answerability from source (precision), topic coverage of the doc (recall), exactly-one-defensible-answer for single-answer questions, distractor plausibility
   - [ ] Judge calibration with seeded negatives: ~3 hand-written bad questions per fixture (one hallucinated fact, one with two defensible answers, one answerable from general knowledge but not the doc); `pnpm eval:judge` must catch all of them or the judge fails, not the generator
   - [ ] Structural checks stay deterministic, not judged: 4 options, 5 to 8 questions, multi-answer cardinality
-  - [ ] `pnpm eval` runs the set and prints a scorecard; results logged to Langfuse as dataset runs
+  - [ ] `pnpm eval` runs the set and prints a scorecard; results logged to LangSmith as experiment runs
 
 ## Phase 3: UI and polish (2 to 3 hours)
 
 - [ ] Minimal Vue UI: URL input, question flow, single vs multi-select, final score screen
 - [ ] Iterate the generation prompt against the eval scorecard, not by eyeballing output; keep before/after scores as the improvement story
 - [ ] Compare the two strategies on the same fixtures with the same judge, so "different strategies" comes with evidence, not vibes
-- [ ] Langfuse tracing on the generation call
+- [ ] LangSmith tracing on the generation call
 - [ ] Second generation strategy behind the strategy interface (e.g. single-pass vs chunked)
 - [ ] Repo README: data-flow explanation, quickstart, deliberate "known limitations" section
 
