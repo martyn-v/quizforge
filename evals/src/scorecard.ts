@@ -1,4 +1,4 @@
-import type { EvalQuiz } from "./quiz-shape.ts";
+import type { DraftQuiz } from "./quiz-shape.ts";
 import type { QuestionVerdict, CoverageVerdict } from "./judge/judge.ts";
 import { structuralFailures } from "./quiz-shape.ts";
 
@@ -18,7 +18,7 @@ function fraction(hits: number, total: number): number | null {
 /** Folds judge verdicts into one score row for a fixture. */
 export function aggregateScore(
   fixtureId: string,
-  quiz: EvalQuiz,
+  quiz: DraftQuiz,
   verdicts: QuestionVerdict[],
   coverage: CoverageVerdict | null,
 ): FixtureScore {

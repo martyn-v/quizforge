@@ -1,9 +1,9 @@
 import { FakeListChatModel } from "@langchain/core/utils/testing";
 import type { BaseMessage } from "@langchain/core/messages";
 import { judgeQuestion, judgeCoverage } from "./judge.ts";
-import type { EvalQuestion, EvalQuiz } from "../quiz-shape.ts";
+import type { DraftQuestion, DraftQuiz } from "../quiz-shape.ts";
 
-const question: EvalQuestion = {
+const question: DraftQuestion = {
   text: "What does leftPad do?",
   type: "single",
   options: [
@@ -14,7 +14,7 @@ const question: EvalQuestion = {
   ],
 };
 
-const quiz: EvalQuiz = { title: "left-pad quiz", questions: [question] };
+const quiz: DraftQuiz = { title: "left-pad quiz", questions: [question] };
 
 const verdict = {
   answerable: true,

@@ -35,6 +35,9 @@ importers:
       '@langchain/ollama':
         specifier: 1.3.0
         version: 1.3.0(@langchain/core@1.2.4)
+      '@quizforge/shared':
+        specifier: workspace:*
+        version: link:../shared
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2

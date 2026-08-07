@@ -5,7 +5,7 @@ import { join, dirname } from "node:path";
 import { makeGenerateQuestionsNode } from "../../../server/src/agent/nodes/generate-questions.ts";
 import { buildGeneratorModel, buildJudgeModel } from "../model-factory.ts";
 import { loadManifest, loadFixtureSource } from "../fixtures.ts";
-import { EvalQuizSchema } from "../quiz-shape.ts";
+import { DraftQuizSchema } from "../quiz-shape.ts";
 import { judgeQuestion, judgeCoverage } from "../judge/judge.ts";
 import { withRateLimitRetry } from "../rate-limit.ts";
 import {
@@ -33,17 +33,19 @@ for (const fixture of loadManifest()) {
       {
         readme_url: fixture.url,
         source,
+        draft: undefined,
         quiz: undefined,
-        quizId: undefined,
-        answers: [],
-        scores: [],
+        answers: {},
+        scores: {},
         finalScore: undefined,
       },
       {} as never,
     ),
   );
 
-  const parsed = EvalQuizSchema.safeParse((update as { quiz: unknown }).quiz);
+  const parsed = DraftQuizSchema.safeParse(
+    (update as { draft: unknown }).draft,
+  );
   if (!parsed.success) {
     scores.push({
       fixtureId: fixture.id,

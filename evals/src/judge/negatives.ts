@@ -1,11 +1,11 @@
-import type { EvalQuestion } from "../quiz-shape.ts";
+import type { DraftQuestion } from "../quiz-shape.ts";
 
 export interface Negative {
   fixtureId: string;
   /** The verdict field the judge must set to false. */
   mustFail: "answerable" | "singleDefensibleAnswer";
   note: string;
-  question: EvalQuestion;
+  question: DraftQuestion;
 }
 
 /**

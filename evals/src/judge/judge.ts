@@ -1,7 +1,7 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { z } from "zod/v4";
-import type { EvalQuestion, EvalQuiz } from "../quiz-shape.ts";
+import type { DraftQuestion, DraftQuiz } from "../quiz-shape.ts";
 import { withRateLimitRetry, isRateLimitError } from "../rate-limit.ts";
 
 export const QuestionVerdictSchema = z.object({
@@ -85,7 +85,7 @@ async function invokeJudge<Schema extends z.ZodType>(
   throw new Error("unreachable");
 }
 
-function formatQuestion(question: EvalQuestion): string {
+function formatQuestion(question: DraftQuestion): string {
   const options = question.options
     .map(
       (option, index) =>
@@ -99,7 +99,7 @@ function formatQuestion(question: EvalQuestion): string {
 export function judgeQuestion(
   llm: BaseChatModel,
   source: string,
-  question: EvalQuestion,
+  question: DraftQuestion,
 ): Promise<QuestionVerdict> {
   const request = `Source document:\n${source}\n\n${formatQuestion(question)}`;
   return invokeJudge(
@@ -114,7 +114,7 @@ export function judgeQuestion(
 export function judgeCoverage(
   llm: BaseChatModel,
   source: string,
-  quiz: EvalQuiz,
+  quiz: DraftQuiz,
 ): Promise<CoverageVerdict> {
   const questions = quiz.questions
     .map((q, i) => `${i + 1}. ${q.text}`)

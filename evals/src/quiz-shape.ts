@@ -1,37 +1,26 @@
-import { z } from "zod/v4";
+import {
+  DraftQuizSchema,
+  type DraftOption,
+  type DraftQuestion,
+  type DraftQuiz,
+} from "@quizforge/shared";
 
 /**
- * The intended full quiz shape. The server QuizSchema does not have
- * questions yet. This schema is the structural contract of the eval and
- * the acceptance test for that future schema work.
+ * The eval quiz shape is the shared draft schema, which carries no size
+ * bounds. The deterministic checks below stay here on purpose: they are
+ * the structural contract of the eval and run outside the server
+ * generation schema, so the eval can parse a structurally bad quiz and
+ * report on it instead of failing the parse.
  */
-export const EvalOptionSchema = z.object({
-  text: z.string(),
-  isCorrect: z.boolean(),
-});
-
-export const EvalQuestionSchema = z.object({
-  text: z.string(),
-  type: z.enum(["single", "multi"]),
-  options: z.array(EvalOptionSchema),
-});
-
-export const EvalQuizSchema = z.object({
-  title: z.string(),
-  description: z.string().optional(),
-  questions: z.array(EvalQuestionSchema),
-});
-
-export type EvalOption = z.infer<typeof EvalOptionSchema>;
-export type EvalQuestion = z.infer<typeof EvalQuestionSchema>;
-export type EvalQuiz = z.infer<typeof EvalQuizSchema>;
+export { DraftQuizSchema };
+export type { DraftOption, DraftQuestion, DraftQuiz };
 
 const MIN_QUESTIONS = 5;
 const MAX_QUESTIONS = 8;
 const OPTIONS_PER_QUESTION = 4;
 
 /** Returns one message per structural rule the quiz breaks. */
-export function structuralFailures(quiz: EvalQuiz): string[] {
+export function structuralFailures(quiz: DraftQuiz): string[] {
   const failures: string[] = [];
 
   const count = quiz.questions.length;

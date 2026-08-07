@@ -1,7 +1,7 @@
-import { EvalQuizSchema, structuralFailures } from "./quiz-shape.ts";
-import type { EvalQuestion, EvalQuiz } from "./quiz-shape.ts";
+import { DraftQuizSchema, structuralFailures } from "./quiz-shape.ts";
+import type { DraftQuestion, DraftQuiz } from "./quiz-shape.ts";
 
-function makeQuestion(overrides: Partial<EvalQuestion> = {}): EvalQuestion {
+function makeQuestion(overrides: Partial<DraftQuestion> = {}): DraftQuestion {
   return {
     text: "What does leftPad do?",
     type: "single",
@@ -15,20 +15,20 @@ function makeQuestion(overrides: Partial<EvalQuestion> = {}): EvalQuestion {
   };
 }
 
-function makeQuiz(questionCount = 5): EvalQuiz {
+function makeQuiz(questionCount = 5): DraftQuiz {
   return {
     title: "left-pad quiz",
     questions: Array.from({ length: questionCount }, () => makeQuestion()),
   };
 }
 
-describe("EvalQuizSchema", () => {
+describe("DraftQuizSchema", () => {
   it("accepts a well-formed quiz", () => {
-    expect(EvalQuizSchema.safeParse(makeQuiz()).success).toBe(true);
+    expect(DraftQuizSchema.safeParse(makeQuiz()).success).toBe(true);
   });
 
   it("rejects a quiz without questions", () => {
-    const parsed = EvalQuizSchema.safeParse({ title: "t" });
+    const parsed = DraftQuizSchema.safeParse({ title: "t" });
     expect(parsed.success).toBe(false);
   });
 });
