@@ -2,7 +2,7 @@ import { InvalidAnswerError } from "../common/errors";
 import {
   MULTIPLE_CHOICE_SCORING_STRATEGY,
   MultipleChoiceScoringMode,
-} from "./scoring-modes.strategy";
+} from "./scoring-modes";
 import { ScoringService } from "./scoring.service";
 import { ScorableQuestion } from "./scoring.types";
 

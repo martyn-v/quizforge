@@ -3,7 +3,7 @@ import { scoringModeProvider } from "./scoring-mode.provider";
 import {
   MULTIPLE_CHOICE_SCORING_STRATEGY,
   MultipleChoiceScoringMode,
-} from "./scoring-modes.strategy";
+} from "./scoring-modes";
 
 /** Minimal stand-in: the factory only ever calls get(key, defaultValue). */
 function configWith(value?: string): ConfigService {

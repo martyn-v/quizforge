@@ -1,7 +1,7 @@
 import {
   MULTIPLE_CHOICE_SCORING_STRATEGY,
   MultipleChoiceScoringMode,
-} from "./scoring-modes.strategy";
+} from "./scoring-modes";
 
 const spec = MULTIPLE_CHOICE_SCORING_STRATEGY[MultipleChoiceScoringMode.SPEC];
 const scaled =

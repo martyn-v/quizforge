@@ -1,7 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ScorableQuestion, ScoredAnswer } from "./scoring.types";
 import { SCORING_MODE_PROVIDER } from "./scoring-mode.provider";
-import type { MultipleChoiceScoringStrategy } from "./scoring-modes.strategy";
+import type { MultipleChoiceScoringStrategy } from "./scoring-modes";
 import { InvalidAnswerError } from "../common/errors";
 
 @Injectable()

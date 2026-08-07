@@ -2,14 +2,15 @@ import {
   MULTIPLE_CHOICE_SCORING_STRATEGY,
   MultipleChoiceScoringMode,
   type MultipleChoiceScoringStrategy,
-} from "./scoring-modes.strategy";
+} from "./scoring-modes";
 import type { FactoryProvider } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 export const SCORING_MODE_PROVIDER = Symbol("SCORING_MODE_PROVIDER");
 
 // `satisfies` rather than a type annotation, so the exact factory signature
-// survives for callers. See generation-strategy.provider.ts for the reasons.
+// survives for callers. See agent/providers/generation-strategy.provider.ts
+// for the reasons.
 export const scoringModeProvider = {
   provide: SCORING_MODE_PROVIDER,
   useFactory: (config: ConfigService): MultipleChoiceScoringStrategy => {
