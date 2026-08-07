@@ -8,6 +8,11 @@
 generator client {
     provider = "prisma-client"
     output   = "../src/generated/prisma"
+
+    // Extensionless relative imports. The default emits "./internal/class.js"
+    // style specifiers, which tsc and vitest resolve to the .ts sources but
+    // the swc-node dev runner does not, so `pnpm dev` fails at startup.
+    importFileExtension = ""
 }
 
 datasource db {

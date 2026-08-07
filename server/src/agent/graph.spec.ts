@@ -3,6 +3,8 @@ import { MemorySaver } from "@langchain/langgraph";
 import { buildQuizGraph } from "./graph";
 import { QuizSchema } from "./agent.schemas";
 import { z } from "zod/v4";
+import { makePrismaMock } from "../common/testing";
+import { PrismaClient, Quiz } from "../generated/prisma/client";
 
 /**
  * Journey tests. They run the compiled graph, so they cover the nodes and the
@@ -23,10 +25,14 @@ function stubFetch(body: string) {
   return fetchMock;
 }
 
-function buildTestGraph(modelResponses: string[] = []) {
+function buildTestGraph(
+  modelResponses: string[] = [],
+  prisma: PrismaClient = makePrismaMock(),
+) {
   return buildQuizGraph(
     new FakeListChatModel({ responses: modelResponses }),
     new MemorySaver(),
+    prisma,
   );
 }
 
@@ -100,27 +106,36 @@ describe("the quiz graph", () => {
     ],
   };
 
-  it("converts the url, fetches the source, generates the questions, and puts everything in the state", async () => {
+  it("converts the url, fetches the source, generates the questions, persists the quiz, and puts everything in the state", async () => {
+    // ARRANGE:
     stubFetch("# Title");
+    const prisma = makePrismaMock();
+    const quizId = crypto.randomUUID();
+    prisma.quiz.create.mockResolvedValue({ id: quizId } as Quiz);
 
-    const result = await buildTestGraph([JSON.stringify(fakeQuiz)]).invoke(
-      { readme_url: BLOB_URL },
-      newThread(),
-    );
+    // ACT:
+    const result = await buildTestGraph(
+      [JSON.stringify(fakeQuiz)],
+      prisma,
+    ).invoke({ readme_url: BLOB_URL }, newThread());
 
-    // The whole state is asserted, not one key. A new node that adds a
-    // channel then fails here, which is the reminder to cover it.
+    // ASSERT:
     expect(result).toEqual({
       readme_url: RAW_URL,
       source: "# Title",
       quiz: fakeQuiz,
+      quizId,
     });
+    expect(prisma.quiz.create).toHaveBeenCalledOnce();
   });
 
   it("requests the raw url, never the blob url", async () => {
     const fetchMock = stubFetch("# Title");
+    const prisma = makePrismaMock();
+    const quizId = crypto.randomUUID();
+    prisma.quiz.create.mockResolvedValue({ id: quizId } as Quiz);
 
-    await buildTestGraph([JSON.stringify(fakeQuiz)]).invoke(
+    await buildTestGraph([JSON.stringify(fakeQuiz)], prisma).invoke(
       { readme_url: BLOB_URL },
       newThread(),
     );

@@ -55,6 +55,16 @@ export default tseslint.config(
     },
   },
 
+  // Specs assert on mock methods with expect(mock.fn), which the rule reads
+  // as an unbound method reference. Vitest never calls it, so no `this` is
+  // lost. This is the fix the typescript-eslint docs recommend for tests.
+  {
+    files: ['server/**/*.spec.ts', 'shared/**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+    },
+  },
+
   // Vue SFCs: syntax-only, no type-aware rules across template boundaries.
   ...vue.configs['flat/recommended'],
   {

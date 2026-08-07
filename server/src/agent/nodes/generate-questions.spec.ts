@@ -1,15 +1,17 @@
 import { FakeListChatModel } from "@langchain/core/utils/testing";
 import type { BaseMessage } from "@langchain/core/messages";
 import type { QuizSchema } from "../../agent/agent.schemas";
+import { QuizState } from "../../agent/state";
 import { z } from "zod/v4";
 import { makeGenerateQuestionsNode } from "./generate-questions";
 import { CommandInstance } from "@langchain/langgraph";
 import { GenerateQuestionsError } from "../../common/errors";
 
-const state = {
+const state: typeof QuizState.State = {
   readme_url: "https://raw.githubusercontent.com/owner/repo/main/README.md",
   source: "This is a test.",
   quiz: undefined,
+  quizId: undefined,
 };
 
 const fakeQuiz: z.infer<typeof QuizSchema> = {

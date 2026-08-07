@@ -23,6 +23,7 @@
     "@nestjs/config": "^4.0.0",
     "@nestjs/core": "^11.1.0",
     "@nestjs/platform-express": "^11.1.0",
+    "@prisma/adapter-pg": "7.9.1",
     "@prisma/client": "7.9.1",
     "@quizforge/shared": "workspace:*",
     "reflect-metadata": "^0.2.2",
@@ -40,6 +41,7 @@
     "tsx": "^4.20.0",
     "typescript": "^5.9.0",
     "unplugin-swc": "1.5.10",
-    "vitest": "^3.2.0"
+    "vitest": "^3.2.0",
+    "vitest-mock-extended": "^3.1.1"
   }
 }
