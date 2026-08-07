@@ -8,7 +8,10 @@
     "dev": "process-compose up",
     "dev:down": "process-compose down",
     "dev:raw": "pnpm --parallel --filter server --filter web dev",
-    "test": "pnpm --filter server --filter shared test",
+    "test": "pnpm --filter server --filter shared --filter evals test",
+    "eval": "pnpm --filter evals eval",
+    "eval:fixtures": "pnpm --filter evals fixtures",
+    "eval:judge": "pnpm --filter evals judge",
     "prisma": "pnpm --filter server exec prisma"
   },
   "engines": {

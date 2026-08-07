@@ -2,6 +2,7 @@ packages:
   - server
   - web
   - shared
+  - evals
 allowBuilds:
   '@prisma/engines': true
   '@swc/core': true
