@@ -66,7 +66,10 @@ Exports, all as Zod schemas with inferred types:
   presentation only. They show progress. They carry no identity.
 - `ResumeSchema`: `selections`, an array of 1 to 4 unique option id
   strings.
-- `SubmittedAnswerSchema`: `questionId`, `selectedOptionIds`.
+- `AnswersSchema`: a record from question id to the selected option
+  ids. The key makes a second answer for one question structurally
+  impossible, in the same way the composite key on `AnswerSelection`
+  works.
 
 The strict generation schema stays in `server/src/agent/agent.schemas.ts`
 under the name `GeneratedQuizSchema`. It composes the draft schemas and
@@ -92,13 +95,16 @@ scoring tests keep their scenarios and change only the literals.
 - `draft: DraftQuiz?`: written by `generateQuestions`.
 - `quiz: Quiz?`: written by `persistQuiz`. Holds the ids.
 - `quizId` channel: removed. `state.quiz.id` replaces it.
-- `answers: SubmittedAnswer[]`: written by `askQuestion`, in question
-  order. Each entry names its `questionId`, so `finalize` writes rows
-  without a position lookup.
-- `scores: number[]` and `finalScore?`: unchanged. Question order is
-  domain-meaningful here, because the final score weights are
-  positional by spec rule. `quiz.questions` is the single source of
-  that order.
+- `answers: Answers`: written by `askQuestion`. A record keyed by
+  question id. No consumer joins answers to questions by array index.
+  A future question shuffle cannot corrupt scoring.
+- `scores: Record<questionId, number>`: written by `scoreAnswers`,
+  keyed the same way, so `finalize` writes each `Answer.score` row by
+  lookup.
+- `finalScore?: number`: unchanged. The final score weights are
+  positional by spec rule. `scoreAnswers` iterates `quiz.questions`
+  for the weight order. `quiz.questions` is the only order source in
+  the app.
 
 ## Node changes
 
@@ -117,11 +123,14 @@ scoring tests keep their scenarios and change only the literals.
   the loop. A stale submit for another question fails the membership
   check and re-prompts. The membership check is a five-line inline
   `Set` lookup, not a `ScoringService` call, because the service
-  throws and the loop must not.
-- `scoreAnswers`: builds `ScorableQuestion` with real option id
-  strings. The cast disappears. The node stays outside the interrupt
-  loop, so the `ScoringService` throw on an invalid answer remains
-  acceptable defense in depth.
+  throws and the loop must not. The node returns the answers record.
+- `scoreAnswers`: iterates `quiz.questions` and looks up each answer
+  by question id. It first validates that every question id has an
+  answer. It builds `ScorableQuestion` with real option id strings.
+  The cast disappears. The node returns the scores record and the
+  final score. The node stays outside the interrupt loop, so the
+  `ScoringService` throw on an invalid answer remains acceptable
+  defense in depth.
 
 ## Evals changes
 
