@@ -5,11 +5,11 @@ import {
   isInterrupted,
   MemorySaver,
 } from "@langchain/langgraph";
+import { AskQuestionPayloadSchema } from "@quizforge/shared";
 import { buildQuizGraph } from "./graph";
-import { AskQuestionPayloadSchema, QuizSchema } from "./agent.schemas";
-import { z } from "zod/v4";
+import { makeDbQuiz, makeDraft, makeQuiz, oid, qid } from "./quiz-fixtures";
 import { makePrismaMock } from "../common/testing";
-import { PrismaClient, Quiz } from "../generated/prisma/client";
+import { PrismaClient } from "../generated/prisma/client";
 import {
   MULTIPLE_CHOICE_SCORING_STRATEGY,
   MultipleChoiceScoringMode,
@@ -62,70 +62,26 @@ afterEach(() => {
 });
 
 describe("the quiz graph", () => {
-  const fakeQuiz: z.infer<typeof QuizSchema> = {
-    title: "hello",
-    description: "this is a quiz",
-    questions: [
-      {
-        text: "Question 1",
-        type: "single",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: false },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 2",
-        type: "multi",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: true },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 3",
-        type: "single",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: false },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 4",
-        type: "multi",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: true },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 5",
-        type: "single",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: false },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-    ],
-  };
+  const fakeDraft = makeDraft();
+
+  // The correct option ids per question, from the fixture layout:
+  // single questions take their one correct option, multi questions
+  // take both correct options.
+  const correctSelections = [
+    [oid(0, 2)],
+    [oid(1, 1), oid(1, 3)],
+    [oid(2, 0)],
+    [oid(3, 0), oid(3, 1)],
+    [oid(4, 3)],
+  ];
 
   it("converts the url, fetches the source, generates the questions, persists the quiz, collects answers, scores them, and puts everything in the state", async () => {
     // ARRANGE:
     stubFetch("# Title");
     const prisma = makePrismaMock();
     const quizId = crypto.randomUUID();
-    prisma.quiz.create.mockResolvedValue({ id: quizId } as Quiz);
-    const graph = buildTestGraph([JSON.stringify(fakeQuiz)], prisma);
+    prisma.quiz.create.mockResolvedValue(makeDbQuiz(quizId) as never);
+    const graph = buildTestGraph([JSON.stringify(fakeDraft)], prisma);
     const thread = newThread();
 
     // ACT:
@@ -133,7 +89,7 @@ describe("the quiz graph", () => {
     let result = await graph.invoke({ readme_url: BLOB_URL }, thread);
     expect(prisma.quiz.create).toHaveBeenCalledOnce();
     // Second stage: askQuestion, which is a loop over the questions
-    for (const [index, question] of fakeQuiz.questions.entries()) {
+    for (const [index, question] of fakeDraft.questions.entries()) {
       // Check the interrupt here to see it match the quiz questions, then post the answer to continue
       assert(isInterrupted(result));
 
@@ -141,6 +97,7 @@ describe("the quiz graph", () => {
         result[INTERRUPT][0].value,
       );
       expect(payload.index).toEqual(index);
+      expect(payload.question.id).toEqual(qid(index));
       expect(payload.question.text).toEqual(question.text);
       expect(payload.question.type).toEqual(question.type);
       expect(JSON.stringify(result[INTERRUPT][0].value)).not.toContain(
@@ -149,23 +106,32 @@ describe("the quiz graph", () => {
 
       // Resume with an answer; the next invoke returns the next pause (or final state).
       result = await graph.invoke(
-        new Command({
-          resume: {
-            selections: payload.question.type === "single" ? [0] : [0, 1],
-          },
-        }),
+        new Command({ resume: { selections: correctSelections[index] } }),
         thread,
       );
     }
 
-    // ASSERT:
+    // ASSERT: every answer was correct; multi questions score 2 under
+    // the SPEC rule because it counts correct selections.
     expect(result).toEqual({
       readme_url: RAW_URL,
       source: "# Title",
-      quiz: fakeQuiz,
-      quizId,
-      answers: [[0], [0, 1], [0], [0, 1], [0]],
-      scores: [4, 2, 4, 2, 4],
+      draft: fakeDraft,
+      quiz: makeQuiz(quizId),
+      answers: {
+        [qid(0)]: correctSelections[0],
+        [qid(1)]: correctSelections[1],
+        [qid(2)]: correctSelections[2],
+        [qid(3)]: correctSelections[3],
+        [qid(4)]: correctSelections[4],
+      },
+      scores: {
+        [qid(0)]: 4,
+        [qid(1)]: 2,
+        [qid(2)]: 4,
+        [qid(3)]: 2,
+        [qid(4)]: 4,
+      },
       finalScore: expect.closeTo(3.2036, 3) as number,
     });
     // Still once: a resume replays only the interrupted askQuestion node,
@@ -176,10 +142,11 @@ describe("the quiz graph", () => {
   it("requests the raw url, never the blob url", async () => {
     const fetchMock = stubFetch("# Title");
     const prisma = makePrismaMock();
-    const quizId = crypto.randomUUID();
-    prisma.quiz.create.mockResolvedValue({ id: quizId } as Quiz);
+    prisma.quiz.create.mockResolvedValue(
+      makeDbQuiz(crypto.randomUUID()) as never,
+    );
 
-    await buildTestGraph([JSON.stringify(fakeQuiz)], prisma).invoke(
+    await buildTestGraph([JSON.stringify(fakeDraft)], prisma).invoke(
       { readme_url: BLOB_URL },
       newThread(),
     );
@@ -203,9 +170,10 @@ describe("the quiz graph", () => {
     // ARRANGE:
     stubFetch("# Title");
     const prisma = makePrismaMock();
-    const quizId = crypto.randomUUID();
-    prisma.quiz.create.mockResolvedValue({ id: quizId } as Quiz);
-    const graph = buildTestGraph([JSON.stringify(fakeQuiz)], prisma);
+    prisma.quiz.create.mockResolvedValue(
+      makeDbQuiz(crypto.randomUUID()) as never,
+    );
+    const graph = buildTestGraph([JSON.stringify(fakeDraft)], prisma);
     const thread = newThread();
 
     // ACT:
@@ -214,7 +182,7 @@ describe("the quiz graph", () => {
     expect(prisma.quiz.create).toHaveBeenCalledOnce();
     assert(isInterrupted(result));
 
-    // Post an invalid answer (99 is out of range for a 4-option question) to continue
+    // Post a malformed answer (an option index, the old wire contract).
     const invalidAnswerResult = await graph.invoke(
       new Command({ resume: { selections: [99] } }),
       thread,
@@ -226,27 +194,42 @@ describe("the quiz graph", () => {
       invalidAnswerResult[INTERRUPT][0].value,
     );
     expect(payload.index).toEqual(0);
-    expect(payload.question.text).toEqual(fakeQuiz.questions[0].text);
-    expect(payload.question.type).toEqual(fakeQuiz.questions[0].type);
+    expect(payload.question.text).toEqual(fakeDraft.questions[0].text);
+    expect(payload.question.type).toEqual(fakeDraft.questions[0].type);
     expect(
       JSON.stringify(invalidAnswerResult[INTERRUPT][0].value),
     ).not.toContain("isCorrect"); // Ensure the correct answer doesnt leak
-    expect(payload.reason).toContain("Too big: expected number to be <=3");
+    expect(payload.reason).toContain("Invalid response:");
 
-    // Resume with a valid answer; the next invoke returns the next pause (or final state).
-    const validAnswerResult = await graph.invoke(
-      new Command({ resume: { selections: [0] } }),
+    // Post a well-formed option id that belongs to another question.
+    const foreignAnswerResult = await graph.invoke(
+      new Command({ resume: { selections: [oid(1, 0)] } }),
       thread,
     );
 
-    // Check the interrupt here to see it match the quiz questions, then post the answer to continue
+    assert(isInterrupted(foreignAnswerResult));
+    const foreignPayload = AskQuestionPayloadSchema.parse(
+      foreignAnswerResult[INTERRUPT][0].value,
+    );
+    expect(foreignPayload.index).toEqual(0);
+    expect(foreignPayload.reason).toEqual(
+      "Unknown option id for this question.",
+    );
+
+    // Resume with a valid answer; the next invoke returns the next pause (or final state).
+    const validAnswerResult = await graph.invoke(
+      new Command({ resume: { selections: [oid(0, 0)] } }),
+      thread,
+    );
+
+    // Check the interrupt here to see it move to the next question.
     assert(isInterrupted(validAnswerResult));
     const validPayload = AskQuestionPayloadSchema.parse(
       validAnswerResult[INTERRUPT][0].value,
     );
     expect(validPayload.index).toEqual(1);
-    expect(validPayload.question.text).toEqual(fakeQuiz.questions[1].text);
-    expect(validPayload.question.type).toEqual(fakeQuiz.questions[1].type);
+    expect(validPayload.question.text).toEqual(fakeDraft.questions[1].text);
+    expect(validPayload.question.type).toEqual(fakeDraft.questions[1].type);
     expect(validPayload.reason).toBeUndefined(); // No reason for valid answer
   });
 });

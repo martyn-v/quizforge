@@ -1,4 +1,5 @@
 import { GraphNode } from "@langchain/langgraph";
+import type { Scores } from "@quizforge/shared";
 import { QuizState } from "../state";
 import { ScoringService } from "../../scoring/scoring.service";
 import type { ScorableQuestion } from "../../scoring/scoring.types";
@@ -12,33 +13,32 @@ export function makeScoreAnswersNode(
       throw new InvalidStateError("Quiz data is missing.");
     }
 
-    if (state.answers?.length !== state.quiz.questions.length) {
+    // Answers join to questions by id, never by position. Only the
+    // weight order below comes from the question order.
+    if (!state.quiz.questions.every((q) => state.answers[q.id])) {
       throw new InvalidStateError("Answers are missing or incomplete.");
     }
 
-    const scores: number[] = [];
-    for (let i = 0; i < state.quiz.questions.length; i++) {
-      const question = state.quiz.questions[i];
-      const answerOptionIds = new Set(state.answers[i]);
-
+    const scores: Scores = {};
+    const weighted: { score: number }[] = [];
+    for (const question of state.quiz.questions) {
       const scorableQuestion: ScorableQuestion = {
-        type: question.type.toUpperCase() as "SINGLE" | "MULTI",
+        type: question.type,
         correctOptionIds: new Set(
-          question.options.flatMap((o, i) => (o.isCorrect ? [i] : [])),
+          question.options.flatMap((o) => (o.isCorrect ? [o.id] : [])),
         ),
-        allOptionIds: new Set(question.options.map((_, index) => index)),
+        allOptionIds: new Set(question.options.map((o) => o.id)),
       };
 
       const scoredAnswer = scoringService.scoreQuestion(
         scorableQuestion,
-        answerOptionIds,
+        new Set(state.answers[question.id]),
       );
-      scores.push(scoredAnswer.score);
+      scores[question.id] = scoredAnswer.score;
+      weighted.push({ score: scoredAnswer.score });
     }
 
-    const finalScore = scoringService.finalScore(
-      scores.map((score) => ({ score })),
-    );
+    const finalScore = scoringService.finalScore(weighted);
 
     return { scores, finalScore };
   };
