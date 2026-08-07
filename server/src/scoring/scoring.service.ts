@@ -20,12 +20,12 @@ export class ScoringService {
    */
   private validateAnswer(
     question: ScorableQuestion,
-    answerOptionIds: ReadonlySet<number>,
+    answerOptionIds: ReadonlySet<string>,
   ) {
-    if (question.type === "SINGLE") {
+    if (question.type === "single") {
       if (answerOptionIds.size !== 1) {
         throw new InvalidAnswerError(
-          "SINGLE choice question must have exactly one answer",
+          "A single choice question must have exactly one answer",
         );
       }
 
@@ -36,10 +36,10 @@ export class ScoringService {
       }
     }
 
-    if (question.type === "MULTI") {
+    if (question.type === "multi") {
       if (answerOptionIds.size < 1) {
         throw new InvalidAnswerError(
-          "MULTI choice question must have at least one answer",
+          "A multi choice question must have at least one answer",
         );
       }
 
@@ -55,11 +55,11 @@ export class ScoringService {
 
   scoreQuestion(
     question: ScorableQuestion,
-    answerOptionIds: ReadonlySet<number>,
+    answerOptionIds: ReadonlySet<string>,
   ): ScoredAnswer {
     this.validateAnswer(question, answerOptionIds);
 
-    if (question.type === "SINGLE") {
+    if (question.type === "single") {
       const isCorrect = question.correctOptionIds.has(
         Array.from(answerOptionIds)[0],
       );

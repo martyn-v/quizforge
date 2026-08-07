@@ -1,11 +1,12 @@
+import type { QuestionType } from "@quizforge/shared";
+
 export interface ScorableQuestion {
-  // Mirrors the QuestionType enum in prisma/schema.prisma. Kept as a local
-  // union rather than imported from the generated client so scoring stays
-  // free of persistence, but the values have to match or every read needs a
-  // translation step that fails silently when it is forgotten.
-  type: "SINGLE" | "MULTI";
-  correctOptionIds: ReadonlySet<number>;
-  allOptionIds: ReadonlySet<number>;
+  // The domain spelling ("single" | "multi") from shared. The Prisma
+  // enum spelling exists only behind question-type-map.ts in the agent
+  // package; scoring stays free of persistence.
+  type: QuestionType;
+  correctOptionIds: ReadonlySet<string>;
+  allOptionIds: ReadonlySet<string>;
 }
 
 export interface ScoredAnswer {
