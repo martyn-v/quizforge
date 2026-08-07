@@ -1,5 +1,7 @@
 import { FakeListChatModel } from "@langchain/core/utils/testing";
 import type { BaseMessage } from "@langchain/core/messages";
+import type { QuizSchema } from "../../agent/agent.schemas";
+import { z } from "zod/v4";
 import { makeGenerateQuestionsNode } from "./generate-questions";
 import { CommandInstance } from "@langchain/langgraph";
 import { GenerateQuestionsError } from "../../common/errors";
@@ -10,13 +12,64 @@ const state = {
   quiz: undefined,
 };
 
+const fakeQuiz: z.infer<typeof QuizSchema> = {
+  title: "hello",
+  description: "this is a quiz",
+  questions: [
+    {
+      text: "Question 1",
+      type: "single",
+      options: [
+        { text: "Option 1", isCorrect: true },
+        { text: "Option 2", isCorrect: false },
+        { text: "Option 3", isCorrect: false },
+        { text: "Option 4", isCorrect: false },
+      ],
+    },
+    {
+      text: "Question 2",
+      type: "multi",
+      options: [
+        { text: "Option 1", isCorrect: true },
+        { text: "Option 2", isCorrect: true },
+        { text: "Option 3", isCorrect: false },
+        { text: "Option 4", isCorrect: false },
+      ],
+    },
+    {
+      text: "Question 3",
+      type: "single",
+      options: [
+        { text: "Option 1", isCorrect: true },
+        { text: "Option 2", isCorrect: false },
+        { text: "Option 3", isCorrect: false },
+        { text: "Option 4", isCorrect: false },
+      ],
+    },
+    {
+      text: "Question 4",
+      type: "multi",
+      options: [
+        { text: "Option 1", isCorrect: true },
+        { text: "Option 2", isCorrect: true },
+        { text: "Option 3", isCorrect: false },
+        { text: "Option 4", isCorrect: false },
+      ],
+    },
+    {
+      text: "Question 5",
+      type: "single",
+      options: [
+        { text: "Option 1", isCorrect: true },
+        { text: "Option 2", isCorrect: false },
+        { text: "Option 3", isCorrect: false },
+        { text: "Option 4", isCorrect: false },
+      ],
+    },
+  ],
+};
 describe("generateQuestionsNode", () => {
   it("uses the source to generate questions using an LLM", async () => {
-    const fakeQuiz = {
-      title: "hello",
-      description: "this is a quiz",
-    };
-
     const llm = new FakeListChatModel({
       responses: [JSON.stringify(fakeQuiz)],
     });
@@ -53,7 +106,7 @@ describe("generateQuestionsNode", () => {
 
   it("feeds the schema error back to the model on the next attempt", async () => {
     const llm = new FakeListChatModel({
-      responses: ["{}", JSON.stringify({ title: "hello" })],
+      responses: ["{}", JSON.stringify(fakeQuiz)],
     });
     const llmSpy = vi.spyOn(llm, "invoke");
 

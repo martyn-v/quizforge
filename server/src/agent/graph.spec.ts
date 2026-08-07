@@ -1,6 +1,8 @@
 import { FakeListChatModel } from "@langchain/core/utils/testing";
 import { MemorySaver } from "@langchain/langgraph";
 import { buildQuizGraph } from "./graph";
+import { QuizSchema } from "./agent.schemas";
+import { z } from "zod/v4";
 
 /**
  * Journey tests. They run the compiled graph, so they cover the nodes and the
@@ -41,9 +43,61 @@ afterEach(() => {
 });
 
 describe("the quiz graph", () => {
-  const fakeQuiz = {
+  const fakeQuiz: z.infer<typeof QuizSchema> = {
     title: "hello",
     description: "this is a quiz",
+    questions: [
+      {
+        text: "Question 1",
+        type: "single",
+        options: [
+          { text: "Option 1", isCorrect: true },
+          { text: "Option 2", isCorrect: false },
+          { text: "Option 3", isCorrect: false },
+          { text: "Option 4", isCorrect: false },
+        ],
+      },
+      {
+        text: "Question 2",
+        type: "multi",
+        options: [
+          { text: "Option 1", isCorrect: true },
+          { text: "Option 2", isCorrect: true },
+          { text: "Option 3", isCorrect: false },
+          { text: "Option 4", isCorrect: false },
+        ],
+      },
+      {
+        text: "Question 3",
+        type: "single",
+        options: [
+          { text: "Option 1", isCorrect: true },
+          { text: "Option 2", isCorrect: false },
+          { text: "Option 3", isCorrect: false },
+          { text: "Option 4", isCorrect: false },
+        ],
+      },
+      {
+        text: "Question 4",
+        type: "multi",
+        options: [
+          { text: "Option 1", isCorrect: true },
+          { text: "Option 2", isCorrect: true },
+          { text: "Option 3", isCorrect: false },
+          { text: "Option 4", isCorrect: false },
+        ],
+      },
+      {
+        text: "Question 5",
+        type: "single",
+        options: [
+          { text: "Option 1", isCorrect: true },
+          { text: "Option 2", isCorrect: false },
+          { text: "Option 3", isCorrect: false },
+          { text: "Option 4", isCorrect: false },
+        ],
+      },
+    ],
   };
 
   it("converts the url, fetches the source, generates the questions, and puts everything in the state", async () => {
