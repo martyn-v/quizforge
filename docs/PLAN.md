@@ -31,12 +31,12 @@ Nodes:
 - [x] `fetchSource`: convert GitHub blob URLs to raw.githubusercontent.com, handle fetch errors, prune content to fit context
 - [x] `generateQuestions`: LLM call with Zod-validated structured output, one repair round on validation failure
 - [x] `askQuestion`: `interrupt()` carrying the question payload with `isCorrect` flags stripped
-- [ ] `scoreAnswer`: deterministic, calls `ScoringService`
-- [ ] `finalize`: weighted average (geometric weights, ratio 1.1), persist attempt to domain tables
+- [x] `scoreAnswers`: deterministic, scores all answers in one pass after the interrupt loop, calls `ScoringService` per question and computes the weighted final score (geometric weights, ratio 1.1). Batch instead of per-question because the interrupt loop lives inside `askQuestion`, see the README pattern
+- [ ] `finalize`: persist attempt to domain tables (the weighted average moved to `scoreAnswers`, so this node only writes)
 
 Rules:
 
-- [ ] Never raise inside the interrupt loop: invalid answers re-prompt with a reason (LangGraph replays cached resume values on retry; an exception wedges the thread)
+- [x] Never raise inside the interrupt loop: invalid answers re-prompt with a reason (LangGraph replays cached resume values on retry; an exception wedges the thread)
 - [ ] Correct answers never leave the server; scoring is server-side only
 - [ ] thread_id = session id
 
@@ -51,8 +51,8 @@ Endpoints:
 
 Tests and evals:
 
-- [ ] Unit tests on `ScoringService` first: single answer, multi answer partial credit, weighted average, edge cases
-- [ ] One journey test through the compiled graph with a scripted fake model
+- [x] Unit tests on `ScoringService` first: single answer, multi answer partial credit, weighted average, edge cases
+- [x] One journey test through the compiled graph with a scripted fake model
 - [ ] Eval harness before prompt iteration begins:
   - [ ] Fixture set via manifest + fetch script: real READMEs (langgraphjs, pipecat, left-pad) cached into `evals/fixtures/cache` (gitignored), refs pinned to commit SHAs before comparative runs
   - [ ] LLM-as-judge script scoring each generated quiz on: answerability from source (precision), topic coverage of the doc (recall), exactly-one-defensible-answer for single-answer questions, distractor plausibility
