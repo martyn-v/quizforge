@@ -28,9 +28,9 @@ quality decisions get made.
 
 Nodes:
 
-- [ ] `fetchSource`: convert GitHub blob URLs to raw.githubusercontent.com, handle fetch errors, prune content to fit context
-- [ ] `generateQuestions`: LLM call with Zod-validated structured output, one repair round on validation failure
-- [ ] `askQuestion`: `interrupt()` carrying the question payload with `isCorrect` flags stripped
+- [x] `fetchSource`: convert GitHub blob URLs to raw.githubusercontent.com, handle fetch errors, prune content to fit context
+- [x] `generateQuestions`: LLM call with Zod-validated structured output, one repair round on validation failure
+- [x] `askQuestion`: `interrupt()` carrying the question payload with `isCorrect` flags stripped
 - [ ] `scoreAnswer`: deterministic, calls `ScoringService`
 - [ ] `finalize`: weighted average (geometric weights, ratio 1.1), persist attempt to domain tables
 
