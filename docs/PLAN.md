@@ -32,7 +32,7 @@ Nodes:
 - [x] `generateQuestions`: LLM call with Zod-validated structured output, one repair round on validation failure
 - [x] `askQuestion`: `interrupt()` carrying the question payload with `isCorrect` flags stripped
 - [x] `scoreAnswers`: deterministic, scores all answers in one pass after the interrupt loop, calls `ScoringService` per question and computes the weighted final score (geometric weights, ratio 1.1). Batch instead of per-question because the interrupt loop lives inside `askQuestion`, see the README pattern
-- [ ] `finalize`: persist attempt to domain tables (the weighted average moved to `scoreAnswers`, so this node only writes)
+- [x] `finalize`: persist attempt to domain tables (the weighted average moved to `scoreAnswers`, so this node only writes)
 
 Rules:
 
