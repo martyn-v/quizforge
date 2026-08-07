@@ -11,5 +11,11 @@ export default defineConfig({
   // Vitest transforms with esbuild by default, which silently drops
   // emitDecoratorMetadata. Nest then injects undefined instead of erroring.
   // SWC emits the metadata, so DI works the same way it does at runtime.
-  plugins: [swc.vite({ module: { type: 'es6' } })],
+  //
+  // The cast is load-bearing. Two vite majors live in the workspace (web
+  // uses 8, vitest pins 7). unplugin-swc declares no vite peer, so its
+  // Plugin type binds to whichever copy pnpm hoists, and each install can
+  // flip that coin. The plugin works against both; the cast keeps the
+  // typecheck independent of the flip.
+  plugins: [swc.vite({ module: { type: 'es6' } }) as never],
 });
