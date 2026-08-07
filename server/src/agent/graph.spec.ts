@@ -41,10 +41,15 @@ afterEach(() => {
 });
 
 describe("the quiz graph", () => {
-  it("converts the url, fetches the source, and puts both in the state", async () => {
+  const fakeQuiz = {
+    title: "hello",
+    description: "this is a quiz",
+  };
+
+  it("converts the url, fetches the source, generates the questions, and puts everything in the state", async () => {
     stubFetch("# Title");
 
-    const result = await buildTestGraph().invoke(
+    const result = await buildTestGraph([JSON.stringify(fakeQuiz)]).invoke(
       { readme_url: BLOB_URL },
       newThread(),
     );
@@ -54,13 +59,17 @@ describe("the quiz graph", () => {
     expect(result).toEqual({
       readme_url: RAW_URL,
       source: "# Title",
+      quiz: fakeQuiz,
     });
   });
 
   it("requests the raw url, never the blob url", async () => {
     const fetchMock = stubFetch("# Title");
 
-    await buildTestGraph().invoke({ readme_url: BLOB_URL }, newThread());
+    await buildTestGraph([JSON.stringify(fakeQuiz)]).invoke(
+      { readme_url: BLOB_URL },
+      newThread(),
+    );
 
     expect(fetchMock).toHaveBeenCalledWith(RAW_URL, expect.anything());
   });

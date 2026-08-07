@@ -12,3 +12,11 @@ export class FetchSourceError extends Error {
     this.name = "FetchSourceError";
   }
 }
+
+/** The questions could not be generated */
+export class GenerateQuestionsError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = "GenerateQuestionsError";
+  }
+}

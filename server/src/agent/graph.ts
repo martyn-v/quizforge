@@ -6,6 +6,7 @@ import {
 } from "@langchain/langgraph";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { makeFetchSourceNode } from "./nodes/fetch-source";
+import { makeGenerateQuestionsNode } from "./nodes/generate-questions";
 import { QuizState } from "./state";
 
 /**
@@ -21,13 +22,15 @@ import { QuizState } from "./state";
  * same graph with a fake model and a MemorySaver.
  */
 export function buildQuizGraph(
-  _llm: BaseChatModel,
+  llm: BaseChatModel,
   checkpointer: BaseCheckpointSaver,
 ) {
   return new StateGraph(QuizState)
     .addNode("fetchSource", makeFetchSourceNode())
+    .addNode("generateQuestions", makeGenerateQuestionsNode(llm))
     .addEdge(START, "fetchSource")
-    .addEdge("fetchSource", END)
+    .addEdge("fetchSource", "generateQuestions")
+    .addEdge("generateQuestions", END)
     .compile({ checkpointer });
 }
 

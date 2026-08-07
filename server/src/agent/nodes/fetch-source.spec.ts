@@ -165,7 +165,7 @@ describe("fetchSourceNode", () => {
     const fetchMock = stubFetch(new Response("# Pipecat"));
 
     const result = await makeFetchSourceNode()(
-      { readme_url: blobUrl, source: "" },
+      { readme_url: blobUrl, source: "", questions: "" },
       {} as never,
     );
 
@@ -182,7 +182,7 @@ describe("fetchSourceNode", () => {
 
     await expect(
       makeFetchSourceNode()(
-        { readme_url: "https://example.com/README.md", source: "" },
+        { readme_url: "https://example.com/README.md", source: "", questions: "" },
         {} as never,
       ),
     ).rejects.toThrow(FetchSourceError);
