@@ -1,6 +1,6 @@
-import { calibrationFailures } from "./calibration";
-import { negatives } from "./negatives";
-import type { QuestionVerdict } from "./judge";
+import { calibrationFailures } from "./calibration.ts";
+import { negatives } from "./negatives.ts";
+import type { QuestionVerdict } from "./judge.ts";
 
 function verdictWith(overrides: Partial<QuestionVerdict>): QuestionVerdict {
   return {

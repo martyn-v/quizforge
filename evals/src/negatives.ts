@@ -1,4 +1,4 @@
-import type { EvalQuestion } from "./quiz-shape";
+import type { EvalQuestion } from "./quiz-shape.ts";
 
 export interface Negative {
   fixtureId: string;

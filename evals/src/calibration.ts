@@ -1,5 +1,5 @@
-import type { Negative } from "./negatives";
-import type { QuestionVerdict } from "./judge";
+import type { Negative } from "./negatives.ts";
+import type { QuestionVerdict } from "./judge.ts";
 
 export interface CalibrationResult {
   negative: Negative;

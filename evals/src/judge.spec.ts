@@ -1,7 +1,7 @@
 import { FakeListChatModel } from "@langchain/core/utils/testing";
 import type { BaseMessage } from "@langchain/core/messages";
-import { judgeQuestion, judgeCoverage } from "./judge";
-import type { EvalQuestion, EvalQuiz } from "./quiz-shape";
+import { judgeQuestion, judgeCoverage } from "./judge.ts";
+import type { EvalQuestion, EvalQuiz } from "./quiz-shape.ts";
 
 const question: EvalQuestion = {
   text: "What does leftPad do?",

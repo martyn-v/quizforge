@@ -1,7 +1,7 @@
 import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { z } from "zod/v4";
-import type { EvalQuestion, EvalQuiz } from "./quiz-shape";
+import type { EvalQuestion, EvalQuiz } from "./quiz-shape.ts";
 
 export const QuestionVerdictSchema = z.object({
   answerable: z

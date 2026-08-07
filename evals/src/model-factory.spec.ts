@@ -1,6 +1,6 @@
 import { ChatOllama } from "@langchain/ollama";
 import { ChatGroq } from "@langchain/groq";
-import { buildJudgeModel, buildGeneratorModel } from "./model-factory";
+import { buildJudgeModel, buildGeneratorModel } from "./model-factory.ts";
 
 describe("buildJudgeModel", () => {
   it("builds an Ollama judge from JUDGE_OLLAMA_MODEL", () => {

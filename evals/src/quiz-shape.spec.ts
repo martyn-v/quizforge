@@ -1,5 +1,5 @@
-import { EvalQuizSchema, structuralFailures } from "./quiz-shape";
-import type { EvalQuestion, EvalQuiz } from "./quiz-shape";
+import { EvalQuizSchema, structuralFailures } from "./quiz-shape.ts";
+import type { EvalQuestion, EvalQuiz } from "./quiz-shape.ts";
 
 function makeQuestion(overrides: Partial<EvalQuestion> = {}): EvalQuestion {
   return {

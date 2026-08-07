@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { loadManifest, fixtureCachePath } from "./fixtures";
+import { loadManifest, fixtureCachePath } from "./fixtures.ts";
 
 for (const fixture of loadManifest()) {
   const response = await fetch(fixture.url);

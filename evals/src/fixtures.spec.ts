@@ -1,4 +1,4 @@
-import { loadManifest, fixtureCachePath } from "./fixtures";
+import { loadManifest, fixtureCachePath } from "./fixtures.ts";
 
 describe("loadManifest", () => {
   it("returns the three pinned fixtures", () => {
