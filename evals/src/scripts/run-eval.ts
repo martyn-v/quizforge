@@ -7,6 +7,7 @@ import { buildGeneratorModel, buildJudgeModel } from "../model-factory.ts";
 import { loadManifest, loadFixtureSource } from "../fixtures.ts";
 import { EvalQuizSchema } from "../quiz-shape.ts";
 import { judgeQuestion, judgeCoverage } from "../judge/judge.ts";
+import { withRateLimitRetry } from "../rate-limit.ts";
 import {
   aggregateScore,
   formatScorecard,
@@ -27,9 +28,8 @@ for (const fixture of loadManifest()) {
   console.log(`evaluating ${fixture.id} (${fixture.shape})...`);
   const source = loadFixtureSource(fixture.id);
 
-  const update = await generate(
-    { readme_url: fixture.url, source, quiz: undefined },
-    {} as never,
+  const update = await withRateLimitRetry(async () =>
+    generate({ readme_url: fixture.url, source, quiz: undefined }, {} as never),
   );
 
   const parsed = EvalQuizSchema.safeParse((update as { quiz: unknown }).quiz);

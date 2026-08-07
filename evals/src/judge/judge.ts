@@ -2,6 +2,7 @@ import { SystemMessage, HumanMessage } from "@langchain/core/messages";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { z } from "zod/v4";
 import type { EvalQuestion, EvalQuiz } from "../quiz-shape.ts";
+import { withRateLimitRetry, isRateLimitError } from "../rate-limit.ts";
 
 export const QuestionVerdictSchema = z.object({
   answerable: z
@@ -61,8 +62,13 @@ async function invokeJudge<Schema extends z.ZodType>(
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      return schema.parse(await model.invoke(messages));
+      return schema.parse(
+        await withRateLimitRetry(() => model.invoke(messages)),
+      );
     } catch (error) {
+      if (isRateLimitError(error)) {
+        throw error;
+      }
       if (attempt === 2) {
         throw new Error(
           `Judge output did not match the schema after ${attempt} attempts`,
