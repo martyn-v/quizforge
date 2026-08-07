@@ -24,6 +24,10 @@ model than the generator:
 - `JUDGE_OLLAMA_MODEL`: required for Ollama. Pick a model different from
   the generator model.
 - `JUDGE_GROQ_MODEL`: optional, defaults to `llama-3.3-70b-versatile`.
+- `JUDGE_TEMPERATURE`: optional, defaults to `0` for deterministic verdicts.
+- `JUDGE_THINK`: optional, defaults to `false`. Thinking models such as
+  qwen3.5 reason before every answer, which makes a run slow. Set `true`
+  to let the judge reason.
 
 ## How the harness works
 
