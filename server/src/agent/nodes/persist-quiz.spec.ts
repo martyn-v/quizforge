@@ -65,6 +65,7 @@ const state: typeof QuizState.State = {
     ],
   },
   quizId: undefined,
+  answers: [],
 };
 
 describe("persistQuizNode", () => {

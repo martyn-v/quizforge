@@ -1,7 +1,12 @@
 import { FakeListChatModel } from "@langchain/core/utils/testing";
-import { MemorySaver } from "@langchain/langgraph";
+import {
+  Command,
+  INTERRUPT,
+  isInterrupted,
+  MemorySaver,
+} from "@langchain/langgraph";
 import { buildQuizGraph } from "./graph";
-import { QuizSchema } from "./agent.schemas";
+import { AskQuestionPayloadSchema, QuizSchema } from "./agent.schemas";
 import { z } from "zod/v4";
 import { makePrismaMock } from "../common/testing";
 import { PrismaClient, Quiz } from "../generated/prisma/client";
@@ -112,12 +117,34 @@ describe("the quiz graph", () => {
     const prisma = makePrismaMock();
     const quizId = crypto.randomUUID();
     prisma.quiz.create.mockResolvedValue({ id: quizId } as Quiz);
+    const graph = buildTestGraph([JSON.stringify(fakeQuiz)], prisma);
+    const thread = newThread();
 
     // ACT:
-    const result = await buildTestGraph(
-      [JSON.stringify(fakeQuiz)],
-      prisma,
-    ).invoke({ readme_url: BLOB_URL }, newThread());
+    // First stage: fetchSource -> generateQuestions -> persistQuiz
+    let result = await graph.invoke({ readme_url: BLOB_URL }, thread);
+    expect(prisma.quiz.create).toHaveBeenCalledOnce();
+    // Second stage: askQuestion, which is a loop over the questions
+    for (const [index, question] of fakeQuiz.questions.entries()) {
+      // Check the interrupt here to see it match the quiz questions, then post the answer to continue
+      assert(isInterrupted(result));
+
+      const payload = AskQuestionPayloadSchema.parse(
+        result[INTERRUPT][0].value,
+      );
+      expect(payload.index).toEqual(index);
+      expect(payload.question.text).toEqual(question.text);
+      expect(payload.question.type).toEqual(question.type);
+      expect(JSON.stringify(result[INTERRUPT][0].value)).not.toContain(
+        "isCorrect",
+      ); // Ensure the correct answer doesnt leak
+
+      // Resume with an answer; the next invoke returns the next pause (or final state).
+      result = await graph.invoke(
+        new Command({ resume: { selections: [0] } }),
+        thread,
+      );
+    }
 
     // ASSERT:
     expect(result).toEqual({
@@ -125,7 +152,10 @@ describe("the quiz graph", () => {
       source: "# Title",
       quiz: fakeQuiz,
       quizId,
+      answers: [[0], [0], [0], [0], [0]],
     });
+    // Still once: a resume replays only the interrupted askQuestion node,
+    // never the completed persistQuiz node.
     expect(prisma.quiz.create).toHaveBeenCalledOnce();
   });
 
@@ -153,5 +183,56 @@ describe("the quiz graph", () => {
       ),
     ).rejects.toThrow();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("handles invalid resumes by reprompting", async () => {
+    // ARRANGE:
+    stubFetch("# Title");
+    const prisma = makePrismaMock();
+    const quizId = crypto.randomUUID();
+    prisma.quiz.create.mockResolvedValue({ id: quizId } as Quiz);
+    const graph = buildTestGraph([JSON.stringify(fakeQuiz)], prisma);
+    const thread = newThread();
+
+    // ACT:
+    // First stage: fetchSource -> generateQuestions -> persistQuiz
+    const result = await graph.invoke({ readme_url: BLOB_URL }, thread);
+    expect(prisma.quiz.create).toHaveBeenCalledOnce();
+    assert(isInterrupted(result));
+
+    // Post an invalid answer (99 is out of range for a 4-option question) to continue
+    const invalidAnswerResult = await graph.invoke(
+      new Command({ resume: { selections: [99] } }),
+      thread,
+    );
+
+    // Check if we're getting the same question and a reason back.
+    assert(isInterrupted(invalidAnswerResult));
+    const payload = AskQuestionPayloadSchema.parse(
+      invalidAnswerResult[INTERRUPT][0].value,
+    );
+    expect(payload.index).toEqual(0);
+    expect(payload.question.text).toEqual(fakeQuiz.questions[0].text);
+    expect(payload.question.type).toEqual(fakeQuiz.questions[0].type);
+    expect(
+      JSON.stringify(invalidAnswerResult[INTERRUPT][0].value),
+    ).not.toContain("isCorrect"); // Ensure the correct answer doesnt leak
+    expect(payload.reason).toContain("Too big: expected number to be <=3");
+
+    // Resume with a valid answer; the next invoke returns the next pause (or final state).
+    const validAnswerResult = await graph.invoke(
+      new Command({ resume: { selections: [0] } }),
+      thread,
+    );
+
+    // Check the interrupt here to see it match the quiz questions, then post the answer to continue
+    assert(isInterrupted(validAnswerResult));
+    const validPayload = AskQuestionPayloadSchema.parse(
+      validAnswerResult[INTERRUPT][0].value,
+    );
+    expect(validPayload.index).toEqual(1);
+    expect(validPayload.question.text).toEqual(fakeQuiz.questions[1].text);
+    expect(validPayload.question.type).toEqual(fakeQuiz.questions[1].type);
+    expect(validPayload.reason).toBeUndefined(); // No reason for valid answer
   });
 });

@@ -12,6 +12,7 @@ const state: typeof QuizState.State = {
   source: "This is a test.",
   quiz: undefined,
   quizId: undefined,
+  answers: [],
 };
 
 const fakeQuiz: z.infer<typeof QuizSchema> = {

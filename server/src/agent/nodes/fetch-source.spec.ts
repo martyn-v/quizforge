@@ -165,7 +165,13 @@ describe("fetchSourceNode", () => {
     const fetchMock = stubFetch(new Response("# Pipecat"));
 
     const result = await makeFetchSourceNode()(
-      { readme_url: blobUrl, source: "", quiz: undefined, quizId: undefined },
+      {
+        readme_url: blobUrl,
+        source: "",
+        quiz: undefined,
+        quizId: undefined,
+        answers: [],
+      },
       {} as never,
     );
 
@@ -187,6 +193,7 @@ describe("fetchSourceNode", () => {
           source: "",
           quiz: undefined,
           quizId: undefined,
+          answers: [],
         },
         {} as never,
       ),

@@ -4,6 +4,7 @@ import {
   START,
   StateGraph,
 } from "@langchain/langgraph";
+import { makeAskQuestionNode } from "./nodes/ask-question";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { makeFetchSourceNode } from "./nodes/fetch-source";
 import { makeGenerateQuestionsNode } from "./nodes/generate-questions";
@@ -32,10 +33,12 @@ export function buildQuizGraph(
     .addNode("fetchSource", makeFetchSourceNode())
     .addNode("generateQuestions", makeGenerateQuestionsNode(llm))
     .addNode("persistQuiz", makePersistQuizNode(prisma))
+    .addNode("askQuestion", makeAskQuestionNode())
     .addEdge(START, "fetchSource")
     .addEdge("fetchSource", "generateQuestions")
     .addEdge("generateQuestions", "persistQuiz")
-    .addEdge("persistQuiz", END)
+    .addEdge("persistQuiz", "askQuestion")
+    .addEdge("askQuestion", END)
     .compile({ checkpointer });
 }
 
