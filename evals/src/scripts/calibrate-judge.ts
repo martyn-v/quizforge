@@ -1,9 +1,9 @@
-import "./env.ts";
-import { buildJudgeModel } from "./model-factory.ts";
-import { judgeQuestion } from "./judge.ts";
-import { loadFixtureSource } from "./fixtures.ts";
-import { negatives } from "./negatives.ts";
-import { calibrationFailures, type CalibrationResult } from "./calibration.ts";
+import "../env.ts";
+import { buildJudgeModel } from "../model-factory.ts";
+import { judgeQuestion } from "../judge/judge.ts";
+import { loadFixtureSource } from "../fixtures.ts";
+import { negatives } from "../judge/negatives.ts";
+import { calibrationFailures, type CalibrationResult } from "../judge/calibration.ts";
 
 const judge = buildJudgeModel();
 const results: CalibrationResult[] = [];

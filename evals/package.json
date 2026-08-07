@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "eval": "tsx src/run-eval.ts",
-    "fixtures": "tsx src/fetch-fixtures.ts",
-    "judge": "tsx src/calibrate-judge.ts",
+    "eval": "tsx src/scripts/run-eval.ts",
+    "fixtures": "tsx src/scripts/fetch-fixtures.ts",
+    "judge": "tsx src/scripts/calibrate-judge.ts",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit"
   },

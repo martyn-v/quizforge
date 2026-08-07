@@ -1,6 +1,6 @@
 import { aggregateScore, formatScorecard } from "./scorecard.ts";
 import type { EvalQuiz } from "./quiz-shape.ts";
-import type { QuestionVerdict, CoverageVerdict } from "./judge.ts";
+import type { QuestionVerdict, CoverageVerdict } from "./judge/judge.ts";
 
 const quiz: EvalQuiz = {
   title: "t",

@@ -66,7 +66,7 @@ commit SHAs:
 ## Judge calibration
 
 The judge grades the generator, so the harness first grades the judge.
-`src/negatives.ts` holds three hand-written bad questions per fixture: one
+`src/judge/negatives.ts` holds three hand-written bad questions per fixture: one
 with a hallucinated fact, one with two defensible answers, and one
 answerable from general knowledge but not from the document.
 `pnpm eval:judge` runs the judge over them. The judge must reject every

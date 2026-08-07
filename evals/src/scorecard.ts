@@ -1,5 +1,5 @@
 import type { EvalQuiz } from "./quiz-shape.ts";
-import type { QuestionVerdict, CoverageVerdict } from "./judge.ts";
+import type { QuestionVerdict, CoverageVerdict } from "./judge/judge.ts";
 import { structuralFailures } from "./quiz-shape.ts";
 
 export interface FixtureScore {

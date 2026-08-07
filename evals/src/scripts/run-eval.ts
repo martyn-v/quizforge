@@ -1,17 +1,17 @@
-import "./env.ts";
+import "../env.ts";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
-import { makeGenerateQuestionsNode } from "../../server/src/agent/nodes/generate-questions.ts";
-import { buildGeneratorModel, buildJudgeModel } from "./model-factory.ts";
-import { loadManifest, loadFixtureSource } from "./fixtures.ts";
-import { EvalQuizSchema } from "./quiz-shape.ts";
-import { judgeQuestion, judgeCoverage } from "./judge.ts";
+import { makeGenerateQuestionsNode } from "../../../server/src/agent/nodes/generate-questions.ts";
+import { buildGeneratorModel, buildJudgeModel } from "../model-factory.ts";
+import { loadManifest, loadFixtureSource } from "../fixtures.ts";
+import { EvalQuizSchema } from "../quiz-shape.ts";
+import { judgeQuestion, judgeCoverage } from "../judge/judge.ts";
 import {
   aggregateScore,
   formatScorecard,
   type FixtureScore,
-} from "./scorecard.ts";
+} from "../scorecard.ts";
 
 const generator = buildGeneratorModel();
 const judge = buildJudgeModel();
