@@ -29,6 +29,7 @@ const state: typeof QuizState.State = {
   answers: correctAnswers,
   scores: {},
   finalScore: undefined,
+  attemptId: undefined,
 };
 
 describe("scoreAnswersNode", () => {

@@ -75,12 +75,14 @@ describe("the quiz graph", () => {
     [oid(4, 3)],
   ];
 
-  it("converts the url, fetches the source, generates the questions, persists the quiz, collects answers, scores them, and puts everything in the state", async () => {
+  it("converts the url, fetches the source, generates the questions, persists the quiz, collects answers, scores them, and persists the attempt to the database", async () => {
     // ARRANGE:
     stubFetch("# Title");
     const prisma = makePrismaMock();
     const quizId = crypto.randomUUID();
+    const attemptId = crypto.randomUUID();
     prisma.quiz.create.mockResolvedValue(makeDbQuiz(quizId));
+    prisma.attempt.create.mockResolvedValue({ id: attemptId } as never);
     const graph = buildTestGraph([JSON.stringify(fakeDraft)], prisma);
     const thread = newThread();
 
@@ -133,18 +135,18 @@ describe("the quiz graph", () => {
         [qid(4)]: 4,
       },
       finalScore: expect.closeTo(3.2036, 3) as number,
+      attemptId,
     });
     // Still once: a resume replays only the interrupted askQuestion node,
     // never the completed persistQuiz node.
     expect(prisma.quiz.create).toHaveBeenCalledOnce();
+    expect(prisma.attempt.create).toHaveBeenCalledOnce();
   });
 
   it("requests the raw url, never the blob url", async () => {
     const fetchMock = stubFetch("# Title");
     const prisma = makePrismaMock();
-    prisma.quiz.create.mockResolvedValue(
-      makeDbQuiz(crypto.randomUUID()),
-    );
+    prisma.quiz.create.mockResolvedValue(makeDbQuiz(crypto.randomUUID()));
 
     await buildTestGraph([JSON.stringify(fakeDraft)], prisma).invoke(
       { readme_url: BLOB_URL },
@@ -170,13 +172,11 @@ describe("the quiz graph", () => {
     // ARRANGE:
     stubFetch("# Title");
     const prisma = makePrismaMock();
-    prisma.quiz.create.mockResolvedValue(
-      makeDbQuiz(crypto.randomUUID()),
-    );
+    prisma.quiz.create.mockResolvedValue(makeDbQuiz(crypto.randomUUID()));
     const graph = buildTestGraph([JSON.stringify(fakeDraft)], prisma);
     const thread = newThread();
 
-    // ACT:
+    // ACT & ASSERT:
     // First stage: fetchSource -> generateQuestions -> persistQuiz
     const result = await graph.invoke({ readme_url: BLOB_URL }, thread);
     expect(prisma.quiz.create).toHaveBeenCalledOnce();

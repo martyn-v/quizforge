@@ -29,6 +29,10 @@ const QuizState = new StateSchema({
     .number()
     .optional()
     .describe("The final score for the quiz, from scoreAnswers"),
+  attemptId: z
+    .uuid()
+    .optional()
+    .describe("The id of the attempt, from finalize"),
 });
 
 export { QuizState };

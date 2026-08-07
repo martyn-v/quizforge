@@ -38,6 +38,7 @@ for (const fixture of loadManifest()) {
         answers: {},
         scores: {},
         finalScore: undefined,
+        attemptId: undefined,
       },
       {} as never,
     ),

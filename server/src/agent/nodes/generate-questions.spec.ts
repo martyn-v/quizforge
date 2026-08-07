@@ -14,6 +14,7 @@ const state: typeof QuizState.State = {
   answers: {},
   scores: {},
   finalScore: undefined,
+  attemptId: undefined,
 };
 
 const fakeQuiz = makeDraft();

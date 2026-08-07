@@ -176,6 +176,7 @@ describe("fetchSourceNode", () => {
         answers: {},
         scores: {},
         finalScore: undefined,
+        attemptId: undefined,
       },
       {} as never,
     );
@@ -201,6 +202,7 @@ describe("fetchSourceNode", () => {
           answers: {},
           scores: {},
           finalScore: undefined,
+          attemptId: undefined,
         },
         {} as never,
       ),

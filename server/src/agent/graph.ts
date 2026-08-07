@@ -6,6 +6,7 @@ import {
 } from "@langchain/langgraph";
 import { makeAskQuestionNode } from "./nodes/ask-question";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { makeFinalizeNode } from "./nodes/finalize";
 
 import { makeFetchSourceNode } from "./nodes/fetch-source";
 import { makeGenerateQuestionsNode } from "./nodes/generate-questions";
@@ -39,12 +40,14 @@ export function buildQuizGraph(
     .addNode("persistQuiz", makePersistQuizNode(prisma))
     .addNode("askQuestion", makeAskQuestionNode())
     .addNode("scoreAnswers", makeScoreAnswersNode(scoringService))
+    .addNode("finalize", makeFinalizeNode(prisma))
     .addEdge(START, "fetchSource")
     .addEdge("fetchSource", "generateQuestions")
     .addEdge("generateQuestions", "persistQuiz")
     .addEdge("persistQuiz", "askQuestion")
     .addEdge("askQuestion", "scoreAnswers")
-    .addEdge("scoreAnswers", END)
+    .addEdge("scoreAnswers", "finalize")
+    .addEdge("finalize", END)
     .compile({ checkpointer });
 }
 
