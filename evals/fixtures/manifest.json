@@ -1,0 +1,19 @@
+{
+  "fixtures": [
+    {
+      "id": "langgraphjs",
+      "shape": "library",
+      "url": "https://raw.githubusercontent.com/langchain-ai/langgraphjs/6ac60da74f6b9e29d20b111a7947ac3060f1d2dd/libs/langgraph-core/README.md"
+    },
+    {
+      "id": "pipecat",
+      "shape": "application",
+      "url": "https://raw.githubusercontent.com/pipecat-ai/pipecat/a2a9b0872cba6c6638d17d780fdb21e981c047b9/README.md"
+    },
+    {
+      "id": "left-pad",
+      "shape": "sparse",
+      "url": "https://raw.githubusercontent.com/left-pad/left-pad/2fca6157fcca165438e0f9495cf0e5a4e6f71349/README.md"
+    }
+  ]
+}
