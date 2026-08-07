@@ -10,6 +10,11 @@ import { AskQuestionPayloadSchema, QuizSchema } from "./agent.schemas";
 import { z } from "zod/v4";
 import { makePrismaMock } from "../common/testing";
 import { PrismaClient, Quiz } from "../generated/prisma/client";
+import {
+  MULTIPLE_CHOICE_SCORING_STRATEGY,
+  MultipleChoiceScoringMode,
+} from "../scoring/scoring-modes";
+import { ScoringService } from "../scoring/scoring.service";
 
 /**
  * Journey tests. They run the compiled graph, so they cover the nodes and the
@@ -38,6 +43,9 @@ function buildTestGraph(
     new FakeListChatModel({ responses: modelResponses }),
     new MemorySaver(),
     prisma,
+    new ScoringService(
+      MULTIPLE_CHOICE_SCORING_STRATEGY[MultipleChoiceScoringMode.SPEC],
+    ),
   );
 }
 
@@ -111,7 +119,7 @@ describe("the quiz graph", () => {
     ],
   };
 
-  it("converts the url, fetches the source, generates the questions, persists the quiz, and puts everything in the state", async () => {
+  it("converts the url, fetches the source, generates the questions, persists the quiz, collects answers, scores them, and puts everything in the state", async () => {
     // ARRANGE:
     stubFetch("# Title");
     const prisma = makePrismaMock();
@@ -141,7 +149,11 @@ describe("the quiz graph", () => {
 
       // Resume with an answer; the next invoke returns the next pause (or final state).
       result = await graph.invoke(
-        new Command({ resume: { selections: [0] } }),
+        new Command({
+          resume: {
+            selections: payload.question.type === "single" ? [0] : [0, 1],
+          },
+        }),
         thread,
       );
     }
@@ -152,7 +164,9 @@ describe("the quiz graph", () => {
       source: "# Title",
       quiz: fakeQuiz,
       quizId,
-      answers: [[0], [0], [0], [0], [0]],
+      answers: [[0], [0, 1], [0], [0, 1], [0]],
+      scores: [4, 2, 4, 2, 4],
+      finalScore: expect.closeTo(3.2036, 3) as number,
     });
     // Still once: a resume replays only the interrupted askQuestion node,
     // never the completed persistQuiz node.

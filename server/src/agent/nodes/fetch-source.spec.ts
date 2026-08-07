@@ -45,7 +45,10 @@ describe("assertGithubMarkdownUrl", () => {
       label: "a lookalike host",
       url: "https://raw.githubusercontent.com.attacker.example/o/r/main/README.md",
     },
-    { label: "a file that is not markdown", url: "https://github.com/o/r/blob/main/a.txt" },
+    {
+      label: "a file that is not markdown",
+      url: "https://github.com/o/r/blob/main/a.txt",
+    },
     { label: "a url that cannot be parsed", url: "not a url" },
   ])("refuses $label", ({ url }) => {
     expect(() => {
@@ -146,7 +149,7 @@ describe("cleanMarkdown", () => {
   // A quiz about a library asks about its examples, so the cleaning must not
   // reach inside a fenced block. The html and link patterns would corrupt it.
   it("leaves a fenced code block untouched", () => {
-    const readme = "Use it:\n\n```html\n<div id=\"app\"></div>\n```\n";
+    const readme = 'Use it:\n\n```html\n<div id="app"></div>\n```\n';
 
     expect(cleanMarkdown(readme)).toContain('<div id="app"></div>');
   });
@@ -171,6 +174,8 @@ describe("fetchSourceNode", () => {
         quiz: undefined,
         quizId: undefined,
         answers: [],
+        scores: [],
+        finalScore: undefined,
       },
       {} as never,
     );
@@ -194,6 +199,8 @@ describe("fetchSourceNode", () => {
           quiz: undefined,
           quizId: undefined,
           answers: [],
+          scores: [],
+          finalScore: undefined,
         },
         {} as never,
       ),

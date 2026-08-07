@@ -100,6 +100,8 @@ const state: typeof QuizState.State = {
   },
   quizId: "412438f7-b949-41d0-aaae-6387d5bc9291",
   answers: [],
+  scores: [],
+  finalScore: undefined,
 };
 
 describe("askQuestionNode", () => {

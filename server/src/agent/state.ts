@@ -16,6 +16,14 @@ const QuizState = new StateSchema({
     .array(z.array(z.int()))
     .default([])
     .describe("The selected option indices per question, from askQuestion"),
+  scores: z
+    .array(z.number())
+    .default([])
+    .describe("The scores for each question, from scoreAnswers"),
+  finalScore: z
+    .number()
+    .optional()
+    .describe("The final score for the quiz, from scoreAnswers"),
 });
 
 export { QuizState };

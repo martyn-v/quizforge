@@ -29,7 +29,18 @@ for (const fixture of loadManifest()) {
   const source = loadFixtureSource(fixture.id);
 
   const update = await withRateLimitRetry(async () =>
-    generate({ readme_url: fixture.url, source, quiz: undefined }, {} as never),
+    generate(
+      {
+        readme_url: fixture.url,
+        source,
+        quiz: undefined,
+        quizId: undefined,
+        answers: [],
+        scores: [],
+        finalScore: undefined,
+      },
+      {} as never,
+    ),
   );
 
   const parsed = EvalQuizSchema.safeParse((update as { quiz: unknown }).quiz);

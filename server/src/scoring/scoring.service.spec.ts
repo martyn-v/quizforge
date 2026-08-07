@@ -20,11 +20,11 @@ describe("ScoringService", () => {
       const service = new ScoringService(strategy);
       const scoreQuestion: ScorableQuestion = {
         type: "SINGLE",
-        correctOptionIds: new Set(["option1"]),
-        allOptionIds: new Set(["option1", "option2", "option3"]),
+        correctOptionIds: new Set([0]),
+        allOptionIds: new Set([0, 1, 2]),
       };
 
-      const answerOptionIds = new Set(["option1"]);
+      const answerOptionIds = new Set([0]);
 
       const scoredAnswer = service.scoreQuestion(
         scoreQuestion,
@@ -37,11 +37,11 @@ describe("ScoringService", () => {
       const service = new ScoringService(strategy);
       const scoreQuestion: ScorableQuestion = {
         type: "SINGLE",
-        correctOptionIds: new Set(["option1"]),
-        allOptionIds: new Set(["option1", "option2", "option3"]),
+        correctOptionIds: new Set([0]),
+        allOptionIds: new Set([0, 1, 2]),
       };
 
-      const answerOptionIds = new Set(["option2"]);
+      const answerOptionIds = new Set([1]);
 
       const scoredAnswer = service.scoreQuestion(
         scoreQuestion,
@@ -63,11 +63,11 @@ describe("ScoringService", () => {
         );
         const scoreQuestion: ScorableQuestion = {
           type: "MULTI",
-          correctOptionIds: new Set(["option1", "option2"]),
-          allOptionIds: new Set(["option1", "option2", "option3", "option4"]),
+          correctOptionIds: new Set([0, 1]),
+          allOptionIds: new Set([0, 1, 2, 3]),
         };
 
-        const answerOptionIds = new Set(["option1", "option2", "option3"]);
+        const answerOptionIds = new Set([0, 1, 2]);
 
         const scoredAnswer = service.scoreQuestion(
           scoreQuestion,
@@ -86,8 +86,8 @@ describe("ScoringService", () => {
       MultipleChoiceScoringMode.PENALIZED,
     ])("%s strategy", (mode) => {
       it.each([
-        { label: "one correct option", correct: ["option1"] },
-        { label: "three correct options", correct: ["a", "b", "c"] },
+        { label: "one correct option", correct: [0] },
+        { label: "three correct options", correct: [0, 1, 2] },
       ])("awards full marks for a perfect answer, $label", ({ correct }) => {
         const service = new ScoringService(
           MULTIPLE_CHOICE_SCORING_STRATEGY[mode],
@@ -95,7 +95,7 @@ describe("ScoringService", () => {
         const question: ScorableQuestion = {
           type: "MULTI",
           correctOptionIds: new Set(correct),
-          allOptionIds: new Set([...correct, "distractor"]),
+          allOptionIds: new Set([...correct, 3]), // add a wrong option to the set of all options
         };
 
         expect(service.scoreQuestion(question, new Set(correct)).score).toBe(4);
@@ -119,14 +119,14 @@ describe("ScoringService", () => {
   describe("invalid answers", () => {
     const single: ScorableQuestion = {
       type: "SINGLE",
-      correctOptionIds: new Set(["option1"]),
-      allOptionIds: new Set(["option1", "option2", "option3"]),
+      correctOptionIds: new Set([0]),
+      allOptionIds: new Set([0, 1, 2]),
     };
 
     const multiple: ScorableQuestion = {
       type: "MULTI",
-      correctOptionIds: new Set(["option1", "option2"]),
-      allOptionIds: new Set(["option1", "option2", "option3", "option4"]),
+      correctOptionIds: new Set([0, 1]),
+      allOptionIds: new Set([0, 1, 2, 3]),
     };
 
     describe("cardinality", () => {
@@ -134,8 +134,8 @@ describe("ScoringService", () => {
       // the result depend on insertion order: {option1,option2} scores 4 and
       // {option2,option1} scores 0 for the same selection.
       it.each([
-        { order: "correct first", selected: ["option1", "option2"] },
-        { order: "correct second", selected: ["option2", "option1"] },
+        { order: "correct first", selected: [0, 1] },
+        { order: "correct second", selected: [1, 0] },
       ])(
         "rejects two selections on a SINGLE question, $order",
         ({ selected }) => {
@@ -168,9 +168,9 @@ describe("ScoringService", () => {
       it("rejects an option that belongs to no question on the quiz", () => {
         const service = new ScoringService(strategy);
 
-        expect(() =>
-          service.scoreQuestion(single, new Set(["not-an-option"])),
-        ).toThrow(InvalidAnswerError);
+        expect(() => service.scoreQuestion(single, new Set([3]))).toThrow(
+          InvalidAnswerError,
+        );
       });
 
       it("rejects a foreign option mixed in with valid ones", () => {
@@ -179,7 +179,7 @@ describe("ScoringService", () => {
         expect(() =>
           service.scoreQuestion(
             multiple,
-            new Set(["option1", "another-questions-option"]),
+            new Set([0, 4]), // 4 is not a valid option for this question
           ),
         ).toThrow(InvalidAnswerError);
       });
@@ -188,10 +188,7 @@ describe("ScoringService", () => {
         const service = new ScoringService(strategy);
 
         // option3 is in allOptionIds but not correct: wrong, not invalid.
-        expect(
-          service.scoreQuestion(multiple, new Set(["option1", "option3"]))
-            .score,
-        ).toBe(1);
+        expect(service.scoreQuestion(multiple, new Set([0, 2])).score).toBe(1);
       });
     });
 
@@ -199,9 +196,9 @@ describe("ScoringService", () => {
       const service = new ScoringService(strategy);
 
       // /\S/ only asserts the message is not empty, leaving the wording open.
-      expect(() =>
-        service.scoreQuestion(single, new Set(["option1", "option2"])),
-      ).toThrow(/\S/);
+      expect(() => service.scoreQuestion(single, new Set([0, 1]))).toThrow(
+        /\S/,
+      );
     });
   });
 });

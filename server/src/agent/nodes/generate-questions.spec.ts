@@ -13,6 +13,8 @@ const state: typeof QuizState.State = {
   quiz: undefined,
   quizId: undefined,
   answers: [],
+  scores: [],
+  finalScore: undefined,
 };
 
 const fakeQuiz: z.infer<typeof QuizSchema> = {

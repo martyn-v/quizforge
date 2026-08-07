@@ -4,8 +4,8 @@ export interface ScorableQuestion {
   // free of persistence, but the values have to match or every read needs a
   // translation step that fails silently when it is forgotten.
   type: "SINGLE" | "MULTI";
-  correctOptionIds: ReadonlySet<string>;
-  allOptionIds: ReadonlySet<string>;
+  correctOptionIds: ReadonlySet<number>;
+  allOptionIds: ReadonlySet<number>;
 }
 
 export interface ScoredAnswer {

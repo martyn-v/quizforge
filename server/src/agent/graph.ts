@@ -6,11 +6,14 @@ import {
 } from "@langchain/langgraph";
 import { makeAskQuestionNode } from "./nodes/ask-question";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+
 import { makeFetchSourceNode } from "./nodes/fetch-source";
 import { makeGenerateQuestionsNode } from "./nodes/generate-questions";
 import { QuizState } from "./state";
 import { makePersistQuizNode } from "./nodes/persist-quiz";
 import { PrismaClient } from "../generated/prisma/client";
+import { makeScoreAnswersNode } from "./nodes/score-answers";
+import { ScoringService } from "../scoring/scoring.service";
 
 /**
  * Builds and compiles the quiz graph.
@@ -28,17 +31,20 @@ export function buildQuizGraph(
   llm: BaseChatModel,
   checkpointer: BaseCheckpointSaver,
   prisma: PrismaClient,
+  scoringService: ScoringService,
 ) {
   return new StateGraph(QuizState)
     .addNode("fetchSource", makeFetchSourceNode())
     .addNode("generateQuestions", makeGenerateQuestionsNode(llm))
     .addNode("persistQuiz", makePersistQuizNode(prisma))
     .addNode("askQuestion", makeAskQuestionNode())
+    .addNode("scoreAnswers", makeScoreAnswersNode(scoringService))
     .addEdge(START, "fetchSource")
     .addEdge("fetchSource", "generateQuestions")
     .addEdge("generateQuestions", "persistQuiz")
     .addEdge("persistQuiz", "askQuestion")
-    .addEdge("askQuestion", END)
+    .addEdge("askQuestion", "scoreAnswers")
+    .addEdge("scoreAnswers", END)
     .compile({ checkpointer });
 }
 

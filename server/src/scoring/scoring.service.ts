@@ -20,7 +20,7 @@ export class ScoringService {
    */
   private validateAnswer(
     question: ScorableQuestion,
-    answerOptionIds: ReadonlySet<string>,
+    answerOptionIds: ReadonlySet<number>,
   ) {
     if (question.type === "SINGLE") {
       if (answerOptionIds.size !== 1) {
@@ -55,7 +55,7 @@ export class ScoringService {
 
   scoreQuestion(
     question: ScorableQuestion,
-    answerOptionIds: ReadonlySet<string>,
+    answerOptionIds: ReadonlySet<number>,
   ): ScoredAnswer {
     this.validateAnswer(question, answerOptionIds);
 

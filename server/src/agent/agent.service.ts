@@ -15,6 +15,7 @@ import {
 } from "./providers/generation-strategy.provider";
 import { PrismaClient } from "../generated/prisma/client";
 import { PRISMA } from "./providers/prisma.provider";
+import { ScoringService } from "../scoring/scoring.service";
 
 /** Compiles the graph once at startup and holds it. */
 @Injectable()
@@ -27,10 +28,16 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     @Inject(GENERATION_STRATEGY_PROVIDER)
     private _generationStrategy: GenerationStrategy,
     @Inject(PRISMA) private prisma: PrismaClient,
+    private readonly scoringService: ScoringService,
   ) {}
 
   onModuleInit() {
-    this.graph = buildQuizGraph(this.llm, this.checkpointer, this.prisma);
+    this.graph = buildQuizGraph(
+      this.llm,
+      this.checkpointer,
+      this.prisma,
+      this.scoringService,
+    );
   }
 
   async onModuleDestroy() {
