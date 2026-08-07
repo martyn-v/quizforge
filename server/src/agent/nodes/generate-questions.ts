@@ -12,6 +12,15 @@ const SYSTEM_PROMPT = `
 You are a helpful assistant that generates questions for a quiz based on the source material provided.
 The source material is in Markdown format.
 Generate questions that are clear, concise, and relevant to the content of the source material.
+
+Rules:
+- Generate 5 to 8 questions.
+- Each question must have exactly 4 options.
+- Each question must have at least one correct option.
+- Each question must be either a single-choice or multiple-choice question.
+- Multi-choice questions must have at least 2 correct options.
+- The questions and options must be in English.
+- The questions and options must be in the same language as the source material.
 `;
 
 /** True when the model answered but the output does not match the schema. */
