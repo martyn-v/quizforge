@@ -7,15 +7,41 @@ import { ConfigService } from "@nestjs/config";
 
 export const LLM_PROVIDER = Symbol("LLM_PROVIDER");
 
+// An unset or empty variable keeps the provider default, so the model
+// behaves the same as before the variable existed.
+const temperatureFrom = (config: ConfigService): number | undefined => {
+  const raw = config.get<string>("LLM_TEMPERATURE");
+  if (raw === undefined || raw === "") {
+    return undefined;
+  }
+  const value = Number(raw);
+  if (Number.isNaN(value)) {
+    throw new Error(`LLM_TEMPERATURE must be a number, got: ${raw}`);
+  }
+  return value;
+};
+
+const thinkFrom = (config: ConfigService): boolean | undefined => {
+  const raw = config.get<string>("LLM_THINK");
+  if (raw === undefined || raw === "") {
+    return undefined;
+  }
+  return raw === "true";
+};
+
 const buildOllamaModel = (config: ConfigService): ChatOllama => {
   return new ChatOllama({
     model: config.get<string>("OLLAMA_MODEL", "gemma4:31b"),
+    temperature: temperatureFrom(config),
+    think: thinkFrom(config),
   });
 };
 
 const buildGroqModel = (config: ConfigService): ChatGroq => {
   return new ChatGroq({
     model: config.get<string>("GROQ_MODEL", "llama-3.3-70b-versatile"),
+    apiKey: config.get<string>("GROQ_API_KEY"),
+    temperature: temperatureFrom(config),
   });
 };
 
