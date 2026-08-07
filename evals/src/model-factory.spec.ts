@@ -72,6 +72,27 @@ describe("buildGeneratorModel", () => {
     expect((model as ChatOllama).model).toBe("gemma4:31b");
   });
 
+  it("leaves generator tuning unset by default", () => {
+    const model = buildGeneratorModel({}) as ChatOllama;
+    expect(model.temperature).toBeUndefined();
+    expect(model.think).toBeUndefined();
+  });
+
+  it("passes LLM_TEMPERATURE and LLM_THINK to the Ollama generator", () => {
+    const model = buildGeneratorModel({
+      LLM_TEMPERATURE: "0.2",
+      LLM_THINK: "false",
+    }) as ChatOllama;
+    expect(model.temperature).toBe(0.2);
+    expect(model.think).toBe(false);
+  });
+
+  it("throws on a non-numeric LLM_TEMPERATURE", () => {
+    expect(() => buildGeneratorModel({ LLM_TEMPERATURE: "warm" })).toThrow(
+      "LLM_TEMPERATURE must be a number, got: warm",
+    );
+  });
+
   it("builds Groq when LLM_PROVIDER is groq", () => {
     const model = buildGeneratorModel({
       LLM_PROVIDER: "groq",

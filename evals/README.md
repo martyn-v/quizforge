@@ -17,8 +17,10 @@ pnpm eval            # runs the scorecard over all fixtures
 ## Configuration
 
 The generator uses the server variables: `LLM_PROVIDER`, `OLLAMA_MODEL`,
-`GROQ_MODEL`. The judge has its own seam, so it can run on a different
-model than the generator:
+`GROQ_MODEL`, `LLM_TEMPERATURE`, `LLM_THINK`. The eval generator mirrors
+the server seam, so the scorecard measures the model configuration that
+the application ships. The judge has its own seam, so it can run on a
+different model than the generator:
 
 - `JUDGE_PROVIDER`: `ollama` (default) or `groq`.
 - `JUDGE_OLLAMA_MODEL`: required for Ollama. Pick a model different from

@@ -54,10 +54,44 @@ for (const fixture of loadManifest()) {
   scores.push(aggregateScore(fixture.id, quiz, verdicts, coverage));
 }
 
+// "provider default" means the variable is unset and the model uses its
+// own default. The judge defaults are set in buildJudgeModel.
+const generatorInfo = {
+  provider: process.env.LLM_PROVIDER ?? "ollama",
+  strategy: process.env.GENERATION_STRATEGY ?? "single-pass",
+  ollamaModel: process.env.OLLAMA_MODEL ?? "gemma4:31b",
+  groqModel: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
+  temperature: process.env.LLM_TEMPERATURE || "provider default",
+  think: process.env.LLM_THINK || "provider default",
+};
+const judgeInfo = {
+  provider: process.env.JUDGE_PROVIDER ?? "ollama",
+  ollamaModel: process.env.JUDGE_OLLAMA_MODEL ?? null,
+  groqModel: process.env.JUDGE_GROQ_MODEL ?? null,
+  temperature: process.env.JUDGE_TEMPERATURE || "0",
+  think: process.env.JUDGE_THINK || "false",
+};
+
+const generatorModel =
+  generatorInfo.provider === "groq"
+    ? generatorInfo.groqModel
+    : generatorInfo.ollamaModel;
+const judgeModel =
+  judgeInfo.provider === "groq" ? judgeInfo.groqModel : judgeInfo.ollamaModel;
+
+console.log(
+  `\ngenerator: ${generatorInfo.provider}/${generatorModel} ` +
+    `(${generatorInfo.strategy}, temperature=${generatorInfo.temperature}, think=${generatorInfo.think})`,
+);
+console.log(
+  `judge: ${judgeInfo.provider}/${judgeModel} ` +
+    `(temperature=${judgeInfo.temperature}, think=${judgeInfo.think})`,
+);
 console.log(`\n${formatScorecard(scores)}\n`);
 
 const resultsDir = join(
   dirname(fileURLToPath(import.meta.url)),
+  "..",
   "..",
   "results",
 );
@@ -67,21 +101,7 @@ const resultPath = join(resultsDir, `${stamp}.json`);
 writeFileSync(
   resultPath,
   JSON.stringify(
-    {
-      timestamp: stamp,
-      generator: {
-        provider: process.env.LLM_PROVIDER ?? "ollama",
-        strategy: process.env.GENERATION_STRATEGY ?? "single-pass",
-        ollamaModel: process.env.OLLAMA_MODEL ?? "gemma4:31b",
-        groqModel: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
-      },
-      judge: {
-        provider: process.env.JUDGE_PROVIDER ?? "ollama",
-        ollamaModel: process.env.JUDGE_OLLAMA_MODEL ?? null,
-        groqModel: process.env.JUDGE_GROQ_MODEL ?? null,
-      },
-      scores,
-    },
+    { timestamp: stamp, generator: generatorInfo, judge: judgeInfo, scores },
     null,
     2,
   ),
