@@ -1,6 +1,7 @@
 import { interrupt } from "@langchain/langgraph";
+import { AskQuestionPayloadSchema } from "@quizforge/shared";
 import { QuizState } from "../state";
-import { AskQuestionPayloadSchema } from "../agent.schemas";
+import { makeQuiz, oid, qid } from "../quiz-fixtures";
 import { makeAskQuestionNode } from "./ask-question";
 
 // interrupt() only runs inside a graph, so the test replaces it. The mock is
@@ -39,95 +40,56 @@ beforeEach(() => {
   interruptMock.mockReset();
 });
 
+const QUIZ_ID = "412438f7-b949-41d0-aaae-6387d5bc9291";
+
+// One valid selection per question: any option for a single question,
+// any two options for a multi question. Correctness is not relevant
+// here; this node only collects.
+const validResumes = [
+  { selections: [oid(0, 0)] },
+  { selections: [oid(1, 0), oid(1, 1)] },
+  { selections: [oid(2, 2)] },
+  { selections: [oid(3, 1), oid(3, 3)] },
+  { selections: [oid(4, 3)] },
+];
+
+const validAnswers = {
+  [qid(0)]: [oid(0, 0)],
+  [qid(1)]: [oid(1, 0), oid(1, 1)],
+  [qid(2)]: [oid(2, 2)],
+  [qid(3)]: [oid(3, 1), oid(3, 3)],
+  [qid(4)]: [oid(4, 3)],
+};
+
 const state: typeof QuizState.State = {
   readme_url: "https://raw.githubusercontent.com/owner/repo/main/README.md",
   source: "This is a test.",
-  quiz: {
-    title: "hello",
-    description: "this is a quiz",
-    questions: [
-      {
-        text: "Question 1",
-        type: "single",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: false },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 2",
-        type: "multi",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: true },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 3",
-        type: "single",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: false },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 4",
-        type: "multi",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: true },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 5",
-        type: "single",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: false },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-    ],
-  },
-  quizId: "412438f7-b949-41d0-aaae-6387d5bc9291",
-  answers: [],
-  scores: [],
+  draft: undefined,
+  quiz: makeQuiz(QUIZ_ID),
+  answers: {},
+  scores: {},
   finalScore: undefined,
 };
 
 describe("askQuestionNode", () => {
-  it("collects one answer per question, in order", () => {
+  it("collects one answer per question, keyed by question id", () => {
     // ARRANGE:
-    const seen = scriptInterrupt([
-      { selections: [0] },
-      { selections: [0, 1] },
-      { selections: [2] },
-      { selections: [1, 3] },
-      { selections: [3] },
-    ]);
+    const seen = scriptInterrupt([...validResumes]);
 
     // ACT:
     const result = makeAskQuestionNode()(state, {} as never);
 
     // ASSERT:
-    expect(result).toEqual({
-      answers: [[0], [0, 1], [2], [1, 3], [3]],
-    });
+    expect(result).toEqual({ answers: validAnswers });
     expect(interruptMock).toHaveBeenCalledTimes(5);
 
-    // Observe the payloads: question order and no isCorrect anywhere.
+    // Observe the payloads: question order, ids present, no isCorrect.
     // Parsing doubles as an assertion that every payload matches the schema.
     const payloads = seen.map((p) => AskQuestionPayloadSchema.parse(p));
     expect(payloads.map((p) => p.index)).toEqual([0, 1, 2, 3, 4]);
+    expect(payloads.map((p) => p.question.id)).toEqual(
+      [0, 1, 2, 3, 4].map(qid),
+    );
     expect(payloads.every((p) => p.reason === undefined)).toBe(true);
     expect(JSON.stringify(payloads)).not.toContain("isCorrect");
   });
@@ -143,79 +105,81 @@ describe("askQuestionNode", () => {
   });
 
   it("re-interrupts if the answer schema is invalid, with a reason", () => {
-    // ARRANGE:
+    // ARRANGE: option indices are the old wire contract and fail the
+    // uuid schema; the node must re-prompt, never throw.
     const seen = scriptInterrupt([
-      { invalid: "schema" }, // invalid for question 1 (single)
-      { selections: [0] }, // valid for question 1
-      { selections: [0, 1] }, // valid for question 2 (multi)
-      { selections: [2] }, // valid for question 3 (single)
-      { selections: [1, 3] }, // valid for question 4 (multi)
-      { selections: [3] }, // valid for question 5 (single)
+      { selections: [0] }, // invalid: a number is not an option id
+      ...validResumes,
     ]);
 
     // ACT:
     const result = makeAskQuestionNode()(state, {} as never);
 
     // ASSERT:
-    expect(result).toEqual({
-      answers: [[0], [0, 1], [2], [1, 3], [3]],
-    });
+    expect(result).toEqual({ answers: validAnswers });
     expect(interruptMock).toHaveBeenCalledTimes(6);
 
     // The first ask carries no reason; the re-ask of the same question does.
     const payloads = seen.map((p) => AskQuestionPayloadSchema.parse(p));
     expect(payloads[0].reason).toBeUndefined();
     expect(payloads[1].index).toBe(0);
-    expect(payloads[1].reason).toContain(
-      "Invalid input: expected array, received undefined",
-    );
+    expect(payloads[1].reason).toContain("Invalid response:");
   });
 
-  it("re-interrupts if a single question has more than 1 answers, with a reason", () => {
-    // ARRANGE:
+  it("re-interrupts on an option id from another question, with a reason", () => {
+    // ARRANGE: a well-formed uuid that belongs to question 2, offered
+    // as an answer to question 1.
     const seen = scriptInterrupt([
-      { selections: [1, 2] }, // invalid for question 1 (single)
-      { selections: [0] }, // valid for question 1
-      { selections: [0, 1] }, // valid for question 2 (multi)
-      { selections: [2] }, // valid for question 3 (single)
-      { selections: [1, 3] }, // valid for question 4 (multi)
-      { selections: [3] }, // valid for question 5 (single)
+      { selections: [oid(1, 0)] },
+      ...validResumes,
     ]);
 
     // ACT:
     const result = makeAskQuestionNode()(state, {} as never);
 
     // ASSERT:
-    expect(result).toEqual({
-      answers: [[0], [0, 1], [2], [1, 3], [3]],
-    });
+    expect(result).toEqual({ answers: validAnswers });
     expect(interruptMock).toHaveBeenCalledTimes(6);
 
-    // The first ask carries no reason; the re-ask of the same question does.
+    const payloads = seen.map((p) => AskQuestionPayloadSchema.parse(p));
+    expect(payloads[1].index).toBe(0);
+    expect(payloads[1].reason).toBe("Unknown option id for this question.");
+  });
+
+  it("re-interrupts if a single question gets more than 1 answer, with a reason", () => {
+    // ARRANGE:
+    const seen = scriptInterrupt([
+      { selections: [oid(0, 0), oid(0, 1)] }, // invalid: question 1 is single
+      ...validResumes,
+    ]);
+
+    // ACT:
+    const result = makeAskQuestionNode()(state, {} as never);
+
+    // ASSERT:
+    expect(result).toEqual({ answers: validAnswers });
+    expect(interruptMock).toHaveBeenCalledTimes(6);
+
     const payloads = seen.map((p) => AskQuestionPayloadSchema.parse(p));
     expect(payloads[0].reason).toBeUndefined();
     expect(payloads[1].index).toBe(0);
     expect(payloads[1].reason).toContain("Select exactly one option.");
   });
 
-  it("re-interrupts if duplicate answers have been provided", () => {
+  it("re-interrupts if duplicate selections have been provided", () => {
     // ARRANGE:
     const seen = scriptInterrupt([
-      { selections: [0] }, // valid for question 1
-      { selections: [1, 1] }, // invalid for question 2 (multi)
-      { selections: [1, 2] }, // valid for question 2 (multi)
-      { selections: [2] }, // valid for question 3 (single)
-      { selections: [1, 3] }, // valid for question 4 (multi)
-      { selections: [3] }, // valid for question 5 (single)
+      { selections: [oid(0, 0)] }, // valid for question 1
+      { selections: [oid(1, 1), oid(1, 1)] }, // invalid: duplicate id
+      { selections: [oid(1, 0), oid(1, 1)] }, // valid for question 2
+      ...validResumes.slice(2),
     ]);
 
     // ACT:
     const result = makeAskQuestionNode()(state, {} as never);
 
     // ASSERT:
-    expect(result).toEqual({
-      answers: [[0], [1, 2], [2], [1, 3], [3]],
-    });
+    expect(result).toEqual({ answers: validAnswers });
     expect(interruptMock).toHaveBeenCalledTimes(6);
 
     // Question 2's first ask carries no reason; its re-ask does.
@@ -227,7 +191,7 @@ describe("askQuestionNode", () => {
 
   it("throws if the interrupt mock runs out of scripted resumes", () => {
     // ARRANGE:
-    scriptInterrupt([{ selections: [0] }]); // only one resume scripted
+    scriptInterrupt([{ selections: [oid(0, 0)] }]); // only one resume scripted
 
     // ACT & ASSERT:
     expect(() => makeAskQuestionNode()(state, {} as never)).toThrow(

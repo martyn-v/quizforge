@@ -1,8 +1,12 @@
 import { GraphNode, interrupt } from "@langchain/langgraph";
+import {
+  ResumeSchema,
+  type Answers,
+  type AskQuestionPayload,
+} from "@quizforge/shared";
+import { z } from "zod/v4";
 import { InvalidStateError } from "../../common/errors";
 import { QuizState } from "../state";
-import { AskQuestionPayloadSchema, ResumeSchema } from "../agent.schemas";
-import { z } from "zod/v4";
 
 export function makeAskQuestionNode(): GraphNode<typeof QuizState> {
   return (state) => {
@@ -10,15 +14,19 @@ export function makeAskQuestionNode(): GraphNode<typeof QuizState> {
       throw new InvalidStateError("Missing required state property: quiz");
     }
 
-    const answers = [];
+    const answers: Answers = {};
 
     for (let i = 0; i < state.quiz.questions.length; i++) {
       const question = state.quiz.questions[i];
+      const validIds = new Set(question.options.map((o) => o.id));
 
-      const payload: z.infer<typeof AskQuestionPayloadSchema> = {
+      const payload: AskQuestionPayload = {
         question: {
-          ...question,
-          options: question.options.map(({ text }) => ({ text })), // Strip the isCorrect field from the options
+          id: question.id,
+          text: question.text,
+          type: question.type,
+          // Strip the isCorrect field from the options
+          options: question.options.map(({ id, text }) => ({ id, text })),
         },
         index: i,
         total: state.quiz.questions.length,
@@ -32,12 +40,22 @@ export function makeAskQuestionNode(): GraphNode<typeof QuizState> {
           continue;
         }
 
-        if (question.type === "single" && parsed.data.selections.length !== 1) {
+        const { selections } = parsed.data;
+
+        // Membership stays an inline lookup: ScoringService also checks
+        // it, but the service throws and this loop must never throw. A
+        // stale submit for another question fails here and re-prompts.
+        if (!selections.every((id) => validIds.has(id))) {
+          payload.reason = "Unknown option id for this question.";
+          continue;
+        }
+
+        if (question.type === "single" && selections.length !== 1) {
           payload.reason = "Select exactly one option.";
           continue;
         }
 
-        answers.push(parsed.data.selections);
+        answers[question.id] = selections;
         break;
       }
     }
