@@ -20,7 +20,7 @@ describe("persistQuizNode", () => {
     // ARRANGE:
     const prisma = makePrismaMock();
     const quizId = crypto.randomUUID();
-    prisma.quiz.create.mockResolvedValue(makeDbQuiz(quizId) as never);
+    prisma.quiz.create.mockResolvedValue(makeDbQuiz(quizId));
 
     // ACT:
     const result = await makePersistQuizNode(prisma)(state, {} as never);

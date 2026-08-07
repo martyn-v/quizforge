@@ -80,7 +80,7 @@ describe("the quiz graph", () => {
     stubFetch("# Title");
     const prisma = makePrismaMock();
     const quizId = crypto.randomUUID();
-    prisma.quiz.create.mockResolvedValue(makeDbQuiz(quizId) as never);
+    prisma.quiz.create.mockResolvedValue(makeDbQuiz(quizId));
     const graph = buildTestGraph([JSON.stringify(fakeDraft)], prisma);
     const thread = newThread();
 
@@ -143,7 +143,7 @@ describe("the quiz graph", () => {
     const fetchMock = stubFetch("# Title");
     const prisma = makePrismaMock();
     prisma.quiz.create.mockResolvedValue(
-      makeDbQuiz(crypto.randomUUID()) as never,
+      makeDbQuiz(crypto.randomUUID()),
     );
 
     await buildTestGraph([JSON.stringify(fakeDraft)], prisma).invoke(
@@ -171,7 +171,7 @@ describe("the quiz graph", () => {
     stubFetch("# Title");
     const prisma = makePrismaMock();
     prisma.quiz.create.mockResolvedValue(
-      makeDbQuiz(crypto.randomUUID()) as never,
+      makeDbQuiz(crypto.randomUUID()),
     );
     const graph = buildTestGraph([JSON.stringify(fakeDraft)], prisma);
     const thread = newThread();
