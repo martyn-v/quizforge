@@ -143,6 +143,18 @@ These are the important parts of the design:
   permanently unusable. Each invalid answer becomes a new prompt with the
   reason. This includes unknown option ids, the wrong number of selections and
   a malformed body. Only a valid answer completes a question.
+- **The question loop lives in one node, not in the edges.** The `askQuestion`
+  node loops over all the questions and calls `interrupt()` for each one. The
+  alternative is a graph-level loop: a cursor channel in state, one question
+  per node run, and a conditional edge that routes back until the cursor
+  reaches the end. That version writes a checkpoint after every question and
+  exposes progress in state. It costs a cursor channel, a router function,
+  and append updates on two channels. The re-prompt logic stays the same in
+  both versions. A quiz has 5 to 8 questions, so the benefits do not pay
+  here. On resume the node replays from the top: answered interrupts return
+  their cached values, and execution continues at the first open question.
+  If streaming later needs per-question progress from state, the edge
+  version is the migration path.
 - **Structured output with one repair attempt.** A Zod schema controls
   question generation. On a validation failure, the model receives the errors
   one time. A second failure stops the session with an error. The application
