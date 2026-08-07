@@ -2,87 +2,32 @@ import { CommandInstance } from "@langchain/langgraph";
 import { makePersistQuizNode } from "./persist-quiz";
 import { QuizState } from "../state";
 import { makePrismaMock } from "../../common/testing";
-import { Quiz } from "../../generated/prisma/client";
 import { InvalidStateError, PersistQuizError } from "../../common/errors";
+import { makeDbQuiz, makeDraft, makeQuiz } from "../quiz-fixtures";
 
 const state: typeof QuizState.State = {
   readme_url: "https://raw.githubusercontent.com/owner/repo/main/README.md",
   source: "This is a test.",
-  quiz: {
-    title: "hello",
-    description: "this is a quiz",
-    questions: [
-      {
-        text: "Question 1",
-        type: "single",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: false },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 2",
-        type: "multi",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: true },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 3",
-        type: "single",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: false },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 4",
-        type: "multi",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: true },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-      {
-        text: "Question 5",
-        type: "single",
-        options: [
-          { text: "Option 1", isCorrect: true },
-          { text: "Option 2", isCorrect: false },
-          { text: "Option 3", isCorrect: false },
-          { text: "Option 4", isCorrect: false },
-        ],
-      },
-    ],
-  },
-  quizId: undefined,
-  answers: [],
-  scores: [],
+  draft: makeDraft(),
+  quiz: undefined,
+  answers: {},
+  scores: {},
   finalScore: undefined,
 };
 
 describe("persistQuizNode", () => {
-  it("should return the quizId", async () => {
+  it("persists the draft and returns the quiz with database ids", async () => {
     // ARRANGE:
     const prisma = makePrismaMock();
     const quizId = crypto.randomUUID();
-    prisma.quiz.create.mockResolvedValue({ id: quizId } as Quiz);
+    prisma.quiz.create.mockResolvedValue(makeDbQuiz(quizId) as never);
 
     // ACT:
     const result = await makePersistQuizNode(prisma)(state, {} as never);
 
     // ASSERT:
     assert.notInstanceOf(result, CommandInstance);
-    expect(result).toEqual({ quizId });
+    expect(result).toEqual({ quiz: makeQuiz(quizId) });
 
     expect(prisma.quiz.create).toHaveBeenCalledWith({
       data: {
@@ -93,104 +38,54 @@ describe("persistQuizNode", () => {
         strategy: "todo",
         model: "todo",
         questions: {
-          create: [
-            {
-              position: 0,
-              text: "Question 1",
-              type: "SINGLE",
-              options: {
-                create: [
-                  { position: 0, text: "Option 1", isCorrect: true },
-                  { position: 1, text: "Option 2", isCorrect: false },
-                  { position: 2, text: "Option 3", isCorrect: false },
-                  { position: 3, text: "Option 4", isCorrect: false },
-                ],
-              },
+          create: makeDraft().questions.map((q, qi) => ({
+            position: qi,
+            text: q.text,
+            type: q.type === "single" ? "SINGLE" : "MULTI",
+            options: {
+              create: q.options.map((o, oi) => ({
+                position: oi,
+                text: o.text,
+                isCorrect: o.isCorrect,
+              })),
             },
-            {
-              position: 1,
-              text: "Question 2",
-              type: "MULTI",
-              options: {
-                create: [
-                  { position: 0, text: "Option 1", isCorrect: true },
-                  { position: 1, text: "Option 2", isCorrect: true },
-                  { position: 2, text: "Option 3", isCorrect: false },
-                  { position: 3, text: "Option 4", isCorrect: false },
-                ],
-              },
-            },
-            {
-              position: 2,
-              text: "Question 3",
-              type: "SINGLE",
-              options: {
-                create: [
-                  { position: 0, text: "Option 1", isCorrect: true },
-                  { position: 1, text: "Option 2", isCorrect: false },
-                  { position: 2, text: "Option 3", isCorrect: false },
-                  { position: 3, text: "Option 4", isCorrect: false },
-                ],
-              },
-            },
-            {
-              position: 3,
-              text: "Question 4",
-              type: "MULTI",
-              options: {
-                create: [
-                  { position: 0, text: "Option 1", isCorrect: true },
-                  { position: 1, text: "Option 2", isCorrect: true },
-                  { position: 2, text: "Option 3", isCorrect: false },
-                  { position: 3, text: "Option 4", isCorrect: false },
-                ],
-              },
-            },
-            {
-              position: 4,
-              text: "Question 5",
-              type: "SINGLE",
-              options: {
-                create: [
-                  { position: 0, text: "Option 1", isCorrect: true },
-                  { position: 1, text: "Option 2", isCorrect: false },
-                  { position: 2, text: "Option 3", isCorrect: false },
-                  { position: 3, text: "Option 4", isCorrect: false },
-                ],
-              },
-            },
-          ],
+          })),
+        },
+      },
+      include: {
+        questions: {
+          orderBy: { position: "asc" },
+          include: { options: { orderBy: { position: "asc" } } },
         },
       },
     });
   });
 
-  it("should be idempotent", async () => {
+  it("is idempotent once the quiz is in state", async () => {
     // ARRANGE:
     const prisma = makePrismaMock();
-    const quizId = crypto.randomUUID();
-    const stateWithQuizId = { ...state, quizId };
+    const stateWithQuiz = { ...state, quiz: makeQuiz(crypto.randomUUID()) };
 
     // ACT:
     const result = await makePersistQuizNode(prisma)(
-      stateWithQuizId,
+      stateWithQuiz,
       {} as never,
     );
 
     // ASSERT:
     assert.notInstanceOf(result, CommandInstance);
-    expect(result).toEqual({ quizId });
+    expect(result).toEqual({});
     expect(prisma.quiz.create).not.toHaveBeenCalled();
   });
 
-  it("throws when the quiz not in the state", async () => {
+  it("throws when the draft is not in the state", async () => {
     // ARRANGE:
     const prisma = makePrismaMock();
-    const stateWithoutQuiz = { ...state, quiz: undefined };
+    const stateWithoutDraft = { ...state, draft: undefined };
 
     // ACT & ASSERT:
     await expect(
-      makePersistQuizNode(prisma)(stateWithoutQuiz, {} as never),
+      makePersistQuizNode(prisma)(stateWithoutDraft, {} as never),
     ).rejects.toThrowError(InvalidStateError);
   });
 
