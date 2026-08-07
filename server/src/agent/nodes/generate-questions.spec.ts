@@ -1,8 +1,7 @@
 import { FakeListChatModel } from "@langchain/core/utils/testing";
 import type { BaseMessage } from "@langchain/core/messages";
-import type { QuizSchema } from "../../agent/agent.schemas";
 import { QuizState } from "../../agent/state";
-import { z } from "zod/v4";
+import { makeDraft } from "../quiz-fixtures";
 import { makeGenerateQuestionsNode } from "./generate-questions";
 import { CommandInstance } from "@langchain/langgraph";
 import { GenerateQuestionsError } from "../../common/errors";
@@ -10,69 +9,14 @@ import { GenerateQuestionsError } from "../../common/errors";
 const state: typeof QuizState.State = {
   readme_url: "https://raw.githubusercontent.com/owner/repo/main/README.md",
   source: "This is a test.",
+  draft: undefined,
   quiz: undefined,
-  quizId: undefined,
-  answers: [],
-  scores: [],
+  answers: {},
+  scores: {},
   finalScore: undefined,
 };
 
-const fakeQuiz: z.infer<typeof QuizSchema> = {
-  title: "hello",
-  description: "this is a quiz",
-  questions: [
-    {
-      text: "Question 1",
-      type: "single",
-      options: [
-        { text: "Option 1", isCorrect: true },
-        { text: "Option 2", isCorrect: false },
-        { text: "Option 3", isCorrect: false },
-        { text: "Option 4", isCorrect: false },
-      ],
-    },
-    {
-      text: "Question 2",
-      type: "multi",
-      options: [
-        { text: "Option 1", isCorrect: true },
-        { text: "Option 2", isCorrect: true },
-        { text: "Option 3", isCorrect: false },
-        { text: "Option 4", isCorrect: false },
-      ],
-    },
-    {
-      text: "Question 3",
-      type: "single",
-      options: [
-        { text: "Option 1", isCorrect: true },
-        { text: "Option 2", isCorrect: false },
-        { text: "Option 3", isCorrect: false },
-        { text: "Option 4", isCorrect: false },
-      ],
-    },
-    {
-      text: "Question 4",
-      type: "multi",
-      options: [
-        { text: "Option 1", isCorrect: true },
-        { text: "Option 2", isCorrect: true },
-        { text: "Option 3", isCorrect: false },
-        { text: "Option 4", isCorrect: false },
-      ],
-    },
-    {
-      text: "Question 5",
-      type: "single",
-      options: [
-        { text: "Option 1", isCorrect: true },
-        { text: "Option 2", isCorrect: false },
-        { text: "Option 3", isCorrect: false },
-        { text: "Option 4", isCorrect: false },
-      ],
-    },
-  ],
-};
+const fakeQuiz = makeDraft();
 describe("generateQuestionsNode", () => {
   it("uses the source to generate questions using an LLM", async () => {
     const llm = new FakeListChatModel({
@@ -84,9 +28,9 @@ describe("generateQuestionsNode", () => {
 
     assert.notInstanceOf(result, CommandInstance);
 
-    assert.isDefined(result.quiz);
-    assert.equal(result.quiz.title, fakeQuiz.title);
-    assert.equal(result.quiz.description, fakeQuiz.description);
+    assert.isDefined(result.draft);
+    assert.equal(result.draft.title, fakeQuiz.title);
+    assert.equal(result.draft.description, fakeQuiz.description);
 
     expect(llmSpy).toHaveBeenCalledOnce();
 
@@ -118,8 +62,8 @@ describe("generateQuestionsNode", () => {
     const result = await makeGenerateQuestionsNode(llm, 2)(state, {} as never);
 
     assert.notInstanceOf(result, CommandInstance);
-    assert.isDefined(result.quiz);
-    assert.equal(result.quiz.title, "hello");
+    assert.isDefined(result.draft);
+    assert.equal(result.draft.title, "hello");
     expect(llmSpy).toHaveBeenCalledTimes(2);
 
     const [retryInput] = llmSpy.mock.calls[1];

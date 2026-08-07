@@ -5,7 +5,7 @@ import { OutputParserException } from "@langchain/core/output_parsers";
 import { z } from "zod/v4";
 
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { QuizSchema } from "../agent.schemas";
+import { GeneratedQuizSchema } from "../agent.schemas";
 import { GenerateQuestionsError } from "../../common/errors";
 
 const SYSTEM_PROMPT = `
@@ -44,7 +44,7 @@ export function makeGenerateQuestionsNode(
   max_attempts = 2,
 ): GraphNode<typeof QuizState> {
   return async (state) => {
-    const model = llm.withStructuredOutput(QuizSchema);
+    const model = llm.withStructuredOutput(GeneratedQuizSchema);
 
     const messages = [
       new SystemMessage(SYSTEM_PROMPT),
@@ -54,7 +54,7 @@ export function makeGenerateQuestionsNode(
     for (let attempt = 1; ; attempt++) {
       try {
         const result = await model.invoke(messages);
-        return { quiz: QuizSchema.parse(result) };
+        return { draft: GeneratedQuizSchema.parse(result) };
       } catch (error) {
         if (!isSchemaFailure(error)) {
           throw new GenerateQuestionsError(
