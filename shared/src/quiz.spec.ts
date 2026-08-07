@@ -5,7 +5,7 @@ import {
   PublicQuestionSchema,
   QuizSchema,
   ResumeSchema,
-} from "./quiz.js";
+} from "./quiz";
 
 const OPTION_ID = "00000000-0000-4000-8000-200000000000";
 const OPTION_ID_2 = "00000000-0000-4000-8000-200000000001";
