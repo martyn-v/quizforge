@@ -213,6 +213,21 @@ The application sends traces of the generation calls to Langfuse. To enable
 this, set the `LANGFUSE_*` variables in the environment. A trace contains the
 source URL, the strategy, the token usage and the number of repair attempts.
 
+## Roadmap
+
+- **Error events over SSE.** Nodes throw typed errors (`FetchSourceError`,
+  `GenerateQuestionsError`). Failure ends the run, so no error value is
+  written into the graph state. `AgentService` catches the error and maps
+  the error class to a new `error` member of the typed event union. The
+  event carries a code and a fixed, user-safe message. The raw cause stays
+  in the server log. The checkpoint stays at the last successful node, so
+  a retry on the same thread resumes at the failed node. Inside the
+  interrupt loop the rule does not change: an invalid answer causes a
+  re-prompt, never a throw.
+- **A `status` column on the `Quiz` row.** A reloaded page cannot see a
+  past `error` event. The same catch site writes the failure to the domain
+  table. This work waits until the web interface needs reconnect.
+
 ## Known limitations, deliberate at this scope
 
 - **There is no authentication.** Any person with the session id can use the
