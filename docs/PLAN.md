@@ -37,8 +37,8 @@ Nodes:
 Rules:
 
 - [x] Never raise inside the interrupt loop: invalid answers re-prompt with a reason (LangGraph replays cached resume values on retry; an exception wedges the thread)
-- [ ] Correct answers never leave the server; scoring is server-side only
-- [ ] thread_id = session id
+- [x] Correct answers never leave the server; scoring is server-side only
+- [x] thread_id = session id
 
 Endpoints:
 
@@ -47,18 +47,18 @@ Endpoints:
 - [x] `POST /sessions`: start graph, run to first interrupt, return question 1 (streaming response, see Phase 3.5)
 - [x] `POST /sessions/:id/answers`: resume with `Command({ resume })`, return next question or final score (streaming response)
 - [x] `GET /sessions/:id`: read current state
-- [ ] Build the endpoints JSON-first, then upgrade to SSE in Phase 3.5; keep a `?stream=false` fallback for curl demos and tests
+- [x] Build the endpoints JSON-first, then upgrade to SSE in Phase 3.5; keep a `?stream=false` fallback for curl demos and tests
 
 Tests and evals:
 
 - [x] Unit tests on `ScoringService` first: single answer, multi answer partial credit, weighted average, edge cases
 - [x] One journey test through the compiled graph with a scripted fake model
-- [ ] Eval harness before prompt iteration begins:
-  - [ ] Fixture set via manifest + fetch script: real READMEs (langgraphjs, pipecat, left-pad) cached into `evals/fixtures/cache` (gitignored), refs pinned to commit SHAs before comparative runs
-  - [ ] LLM-as-judge script scoring each generated quiz on: answerability from source (precision), topic coverage of the doc (recall), exactly-one-defensible-answer for single-answer questions, distractor plausibility
-  - [ ] Judge calibration with seeded negatives: ~3 hand-written bad questions per fixture (one hallucinated fact, one with two defensible answers, one answerable from general knowledge but not the doc); `pnpm eval:judge` must catch all of them or the judge fails, not the generator
-  - [ ] Structural checks stay deterministic, not judged: 4 options, 5 to 8 questions, multi-answer cardinality
-  - [ ] `pnpm eval` runs the set and prints a scorecard; results logged to LangSmith as experiment runs
+- [x] Eval harness before prompt iteration begins:
+  - [x] Fixture set via manifest + fetch script: real READMEs (langgraphjs, pipecat, left-pad) cached into `evals/fixtures/cache` (gitignored), refs pinned to commit SHAs before comparative runs
+  - [x] LLM-as-judge script scoring each generated quiz on: answerability from source (precision), topic coverage of the doc (recall), exactly-one-defensible-answer for single-answer questions, distractor plausibility
+  - [x] Judge calibration with seeded negatives: ~3 hand-written bad questions per fixture (one hallucinated fact, one with two defensible answers, one answerable from general knowledge but not the doc); `pnpm eval:judge` must catch all of them or the judge fails, not the generator
+  - [x] Structural checks stay deterministic, not judged: 4 options, 5 to 8 questions, multi-answer cardinality
+  - [x] `pnpm eval` runs the set and prints a scorecard; results written to `evals/results`
 
 ## Phase 3: UI and polish (2 to 3 hours)
 
@@ -66,8 +66,9 @@ Tests and evals:
 - [ ] Iterate the generation prompt against the eval scorecard, not by eyeballing output; keep before/after scores as the improvement story
 - [ ] Compare the two strategies on the same fixtures with the same judge, so "different strategies" comes with evidence, not vibes
 - [ ] LangSmith tracing on the generation call
+- [ ] Log eval results to LangSmith as experiment runs
 - [ ] Second generation strategy behind the strategy interface (e.g. single-pass vs chunked)
-- [ ] Repo README: data-flow explanation, quickstart, deliberate "known limitations" section
+- [x] Repo README: data-flow explanation, quickstart, deliberate "known limitations" section
 
 ## Phase 3.5: Streaming (1.5 to 2 hours)
 
