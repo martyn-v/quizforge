@@ -1,6 +1,6 @@
 import { Command, INTERRUPT } from "@langchain/langgraph";
 import type { AskQuestionPayload } from "@quizforge/shared";
-import { InvalidStateError } from "../common/errors";
+import { InvalidStateError, SessionNotFoundError } from "../common/errors";
 import { AgentService } from "./agent.service";
 import { buildQuizGraph } from "./graph";
 import { makeQuiz, oid, qid } from "./quiz-fixtures";
@@ -36,9 +36,30 @@ function interruptedWith(value: unknown) {
   return { [INTERRUPT]: [{ value }] };
 }
 
+/** A getState snapshot for a thread paused at an interrupt. */
+function pausedSnapshot(value: unknown) {
+  return {
+    values: {},
+    next: ["askQuestion"],
+    tasks: [{ interrupts: [{ value }] }],
+    createdAt: "2026-08-08T00:00:00.000Z",
+  };
+}
+
+/** A getState snapshot for a thread that ran to completion. */
+function completedSnapshot(values: Record<string, unknown>) {
+  return { values, next: [], tasks: [], createdAt: "2026-08-08T00:00:00.000Z" };
+}
+
+/** The snapshot getState returns when no checkpoint exists. */
+function unknownSnapshot() {
+  return { values: {}, next: [], tasks: [] };
+}
+
 function makeService() {
   const invoke = vi.fn();
-  buildQuizGraphMock.mockReturnValue({ invoke } as never);
+  const getState = vi.fn().mockResolvedValue(pausedSnapshot(firstQuestion));
+  buildQuizGraphMock.mockReturnValue({ invoke, getState } as never);
   const prisma = { $disconnect: vi.fn() };
   const service = new AgentService(
     checkpointer,
@@ -48,7 +69,7 @@ function makeService() {
     scoringService,
   );
   service.onModuleInit();
-  return { service, invoke, prisma };
+  return { service, invoke, getState, prisma };
 }
 
 beforeEach(() => {
@@ -211,6 +232,19 @@ describe("AgentService", () => {
       ).rejects.toThrow(/attemptId/);
     });
 
+    it("throws SessionNotFoundError without resuming when the session is unknown", async () => {
+      // ARRANGE: no checkpoint for this thread id.
+      const { service, invoke, getState } = makeService();
+      getState.mockResolvedValue(unknownSnapshot());
+
+      // ACT & ASSERT: the class maps to a 404, and the graph must not
+      // start a fresh run from a resume command.
+      await expect(
+        service.submitAnswer(crypto.randomUUID(), [oid(0, 2)]),
+      ).rejects.toBeInstanceOf(SessionNotFoundError);
+      expect(invoke).not.toHaveBeenCalled();
+    });
+
     it("resumes the thread on an invalid answer and reprompts", async () => {
       // ARRANGE:
       const { service, invoke } = makeService();
@@ -232,6 +266,97 @@ describe("AgentService", () => {
       });
       const command = invoke.mock.calls[0][0] as Command;
       expect(command.resume).toEqual({ selections: [oid(0, 2)] });
+    });
+  });
+
+  describe("getSession", () => {
+    it("returns the pending question for a session paused at an interrupt", async () => {
+      // ARRANGE:
+      const { service, getState } = makeService();
+      const sessionId = crypto.randomUUID();
+      getState.mockResolvedValue(pausedSnapshot(firstQuestion));
+
+      // ACT:
+      const response = await service.getSession(sessionId);
+
+      // ASSERT:
+      expect(response).toEqual({ kind: "question", question: firstQuestion });
+      expect(getState).toHaveBeenCalledExactlyOnceWith({
+        configurable: { thread_id: sessionId },
+      });
+    });
+
+    it("strips isCorrect even when the snapshot payload carries it", async () => {
+      // ARRANGE: same boundary rule as startSession (AGENTS.md rule 2).
+      const { service, getState } = makeService();
+      const leaked = {
+        ...firstQuestion,
+        question: {
+          ...firstQuestion.question,
+          options: firstQuestion.question.options.map((o) => ({
+            ...o,
+            isCorrect: true,
+          })),
+        },
+      };
+      getState.mockResolvedValue(pausedSnapshot(leaked));
+
+      // ACT:
+      const response = await service.getSession(crypto.randomUUID());
+
+      // ASSERT:
+      expect(JSON.stringify(response)).not.toContain("isCorrect");
+      expect(response).toEqual({ kind: "question", question: firstQuestion });
+    });
+
+    it("returns the result for a completed session without leaking the quiz", async () => {
+      // ARRANGE: the final state carries the quiz with isCorrect flags.
+      const { service, getState } = makeService();
+      const attemptId = crypto.randomUUID();
+      const scores = { [qid(0)]: 4, [qid(1)]: 2 };
+      getState.mockResolvedValue(
+        completedSnapshot({
+          quiz: makeQuiz(crypto.randomUUID()),
+          scores,
+          finalScore: 3.05,
+          attemptId,
+        }),
+      );
+
+      // ACT:
+      const response = await service.getSession(crypto.randomUUID());
+
+      // ASSERT:
+      expect(response).toEqual({
+        kind: "result",
+        result: { finalScore: 3.05, scores, attemptId },
+      });
+      expect(JSON.stringify(response)).not.toContain("isCorrect");
+    });
+
+    it("throws SessionNotFoundError when the session is unknown", async () => {
+      // ARRANGE:
+      const { service, getState } = makeService();
+      getState.mockResolvedValue(unknownSnapshot());
+
+      // ACT & ASSERT:
+      await expect(
+        service.getSession(crypto.randomUUID()),
+      ).rejects.toBeInstanceOf(SessionNotFoundError);
+    });
+
+    it("throws when a known session is neither paused nor completed", async () => {
+      // ARRANGE: a thread that died between nodes has a checkpoint but
+      // no interrupt and no result. Field-picking would ship undefined.
+      const { service, getState } = makeService();
+      getState.mockResolvedValue(
+        completedSnapshot({ readme_url: "https://example.com" }),
+      );
+
+      // ACT & ASSERT:
+      await expect(
+        service.getSession(crypto.randomUUID()),
+      ).rejects.toBeInstanceOf(InvalidStateError);
     });
   });
 });

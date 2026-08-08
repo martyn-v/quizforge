@@ -9,6 +9,9 @@ export class InvalidAnswerError extends AgentError {}
 
 export class InvalidStateError extends AgentError {}
 
+/** The session id does not match a known thread. */
+export class SessionNotFoundError extends AgentError {}
+
 /** The source document could not be read. */
 export class FetchSourceError extends AgentError {}
 

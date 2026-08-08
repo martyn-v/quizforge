@@ -12,7 +12,7 @@ import {
 } from "@nestjs/common";
 
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { InvalidStateError } from "../common/errors";
+import { InvalidStateError, SessionNotFoundError } from "../common/errors";
 import { buildQuizGraph, type QuizGraph } from "./graph";
 import { CHECKPOINTER } from "./providers/checkpointer.provider";
 import { LLM_PROVIDER } from "./providers/llm.provider";
@@ -80,7 +80,8 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     sessionId: string,
     selections: string[],
   ): Promise<SubmitAnswerResponse> {
-    // FIXME: handle invalid sessionId (e.g. expired, or never existed). The graph will throw an error if the thread_id is unknown, but we should catch that and return a 404 instead of a 500.
+    await this.requireSession(sessionId);
+
     const result = await this.graph.invoke(
       new Command({ resume: { selections } }),
       {
@@ -104,5 +105,51 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
         }),
       };
     }
+  }
+
+  async getSession(sessionId: string): Promise<SubmitAnswerResponse> {
+    const snapshot = await this.requireSession(sessionId);
+
+    const interrupt = snapshot.tasks.flatMap((task) => task.interrupts)[0];
+    if (interrupt !== undefined) {
+      return {
+        kind: "question",
+        question: AskQuestionPayloadSchema.parse(interrupt.value),
+      };
+    }
+
+    // getState types values as any; the schema parse restores safety.
+    const values = snapshot.values as Record<string, unknown>;
+
+    if (values.finalScore === undefined) {
+      throw new InvalidStateError(
+        `Session ${sessionId} is neither paused at a question nor completed`,
+      );
+    }
+
+    return {
+      kind: "result",
+      result: QuizResultSchema.parse({
+        finalScore: values.finalScore,
+        scores: values.scores,
+        attemptId: values.attemptId,
+      }),
+    };
+  }
+
+  /**
+   * Reads the thread snapshot and throws when no checkpoint exists.
+   * getState only sets createdAt when it found a saved checkpoint.
+   */
+  private async requireSession(sessionId: string) {
+    const snapshot = await this.graph.getState({
+      configurable: { thread_id: sessionId },
+    });
+
+    if (snapshot.createdAt === undefined) {
+      throw new SessionNotFoundError(`Unknown session: ${sessionId}`);
+    }
+
+    return snapshot;
   }
 }
