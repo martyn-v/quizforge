@@ -68,7 +68,14 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
 
     const result = await this.graph.invoke(
       { readme_url: url },
-      { configurable: { thread_id: sessionId } },
+      {
+        configurable: { thread_id: sessionId },
+        // The metadata lands on the LangSmith trace of the run.
+        metadata: {
+          strategy: this.generationStrategy,
+          model: this.llmModelName,
+        },
+      },
     );
 
     if (!isInterrupted(result)) {

@@ -7,6 +7,7 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.spec.ts'],
     root: '.',
+    setupFiles: ['./vitest.setup.ts'],
   },
   // Vitest transforms with esbuild by default, which silently drops
   // emitDecoratorMetadata. Nest then injects undefined instead of erroring.

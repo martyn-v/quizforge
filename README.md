@@ -199,7 +199,7 @@ gives each generated quiz a score on two axes, and it also checks hygiene:
 An LLM is the judge. The judge does not check structural validity.
 Deterministic checks control the number of options, the number of questions
 and the number of correct options. These checks run before the judge. The
-application sends the results to LangSmith as experiment runs. A prompt change
+command writes each scorecard to a local JSON file. A prompt change
 therefore has a score from before the change and after it. The judge gives a
 score to the generator. It never gives a score to the user.
 
@@ -221,12 +221,20 @@ questions.
 
 ## Observability
 
-The application sends traces of the generation calls to LangSmith. To enable
-this, set the `LANGSMITH_*` variables in the environment. A trace contains the
-source URL, the strategy, the token usage and the number of repair attempts.
+The application sends traces to LangSmith. To enable this, set the
+`LANGSMITH_*` variables in the environment. Each session run is one trace
+under the thread id. A trace contains the source URL, the strategy, the
+model, the token usage and each repair attempt as a nested model call.
+
+Eval runs trace to a separate project with the `-evals` suffix. This keeps
+eval batches out of the trace stream of the live sessions. Unit tests
+force tracing off and never send runs.
 
 ## Roadmap
 
+- **Eval results as LangSmith experiment runs.** The scorecard stays in a
+  local JSON file today. An upload step after the eval loop can log each
+  fixture as a run with the judge scores as feedback.
 - **Error events over SSE.** Nodes throw typed errors (`FetchSourceError`,
   `GenerateQuestionsError`). Failure ends the run, so no error value is
   written into the graph state. `AgentService` catches the error and maps

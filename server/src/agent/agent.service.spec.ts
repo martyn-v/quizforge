@@ -113,7 +113,10 @@ describe("AgentService", () => {
       expect(result.question).toEqual(firstQuestion);
       expect(invoke).toHaveBeenCalledExactlyOnceWith(
         { readme_url: "https://github.com/o/r/blob/main/README.md" },
-        { configurable: { thread_id: result.sessionId } },
+        {
+          configurable: { thread_id: result.sessionId },
+          metadata: { strategy: generationStrategy, model: "modelName" },
+        },
       );
     });
 
