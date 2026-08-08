@@ -43,10 +43,10 @@ Rules:
 Endpoints:
 
 - [x] `AgentService` exposes a callable surface, not the graph object: `startSession(url)` and `submitAnswer(sessionId, selections)`. This is the boundary that strips `isCorrect`, so a controller cannot return raw graph state
-- [ ] `QuizModule`: thin controllers over that surface. It imports `AgentModule`, and `AgentModule` imports `ScoringModule` for the `scoreAnswer` node
-- [ ] `POST /sessions`: start graph, run to first interrupt, return question 1 (streaming response, see Phase 3.5)
-- [ ] `POST /sessions/:id/answers`: resume with `Command({ resume })`, return next question or final score (streaming response)
-- [ ] `GET /sessions/:id`: read current state
+- [x] `QuizModule`: thin controllers over that surface. It imports `AgentModule`, and `AgentModule` imports `ScoringModule` for the `scoreAnswer` node
+- [x] `POST /sessions`: start graph, run to first interrupt, return question 1 (streaming response, see Phase 3.5)
+- [x] `POST /sessions/:id/answers`: resume with `Command({ resume })`, return next question or final score (streaming response)
+- [x] `GET /sessions/:id`: read current state
 - [ ] Build the endpoints JSON-first, then upgrade to SSE in Phase 3.5; keep a `?stream=false` fallback for curl demos and tests
 
 Tests and evals:
