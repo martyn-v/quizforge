@@ -62,7 +62,7 @@ Tests and evals:
 
 ## Phase 3: UI and polish (2 to 3 hours)
 
-- [ ] Minimal Vue UI: URL input, question flow, single vs multi-select, final score screen
+- [x] Minimal Vue UI: URL input, question flow, single vs multi-select, final score screen
 - [ ] Iterate the generation prompt against the eval scorecard, not by eyeballing output; keep before/after scores as the improvement story
 - [ ] Compare the two strategies on the same fixtures with the same judge, so "different strategies" comes with evidence, not vibes
 - [ ] LangSmith tracing on the generation call
