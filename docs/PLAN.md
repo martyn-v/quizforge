@@ -42,7 +42,7 @@ Rules:
 
 Endpoints:
 
-- [ ] `AgentService` exposes a callable surface, not the graph object: `startSession(url)` and `submitAnswer(threadId, selections)`. This is the boundary that strips `isCorrect`, so a controller cannot return raw graph state
+- [x] `AgentService` exposes a callable surface, not the graph object: `startSession(url)` and `submitAnswer(sessionId, selections)`. This is the boundary that strips `isCorrect`, so a controller cannot return raw graph state
 - [ ] `QuizModule`: thin controllers over that surface. It imports `AgentModule`, and `AgentModule` imports `ScoringModule` for the `scoreAnswer` node
 - [ ] `POST /sessions`: start graph, run to first interrupt, return question 1 (streaming response, see Phase 3.5)
 - [ ] `POST /sessions/:id/answers`: resume with `Command({ resume })`, return next question or final score (streaming response)
