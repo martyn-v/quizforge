@@ -74,6 +74,15 @@ export default tseslint.config(
         parser: tseslint.parser,
         extraFileExtensions: ['.vue'],
       },
+      // The browser globals the components actually use. Enough for a
+      // three-screen UI; swap for the `globals` package if this grows.
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+      },
     },
     rules: {
       // Pure formatting, and nothing here formats Vue templates consistently.
