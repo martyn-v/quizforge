@@ -18,6 +18,7 @@ const state: typeof QuizState.State = {
     [qid(3)]: [oid(3, 0), oid(3, 1)],
     [qid(4)]: [oid(4, 3)],
   },
+  startedAt: "2024-06-01T12:00:00.000Z",
   scores: {
     [qid(0)]: 4,
     [qid(1)]: 4,
@@ -53,7 +54,7 @@ describe("finalizeNode", () => {
         quizId: QUIZ_ID,
         threadId: threadId,
         finalScore: 4,
-        startedAt: expect.any(Date) as Date,
+        startedAt: "2024-06-01T12:00:00.000Z",
         answers: {
           create: [
             {
@@ -108,6 +109,19 @@ describe("finalizeNode", () => {
         configurable: { thread_id: crypto.randomUUID() },
       } as never),
     ).rejects.toThrow("Missing required state property: quiz");
+  });
+
+  it("throws if state.startedAt is missing", async () => {
+    // ARRANGE:
+    const prisma = makePrismaMock();
+    const stateWithoutStartedAt = { ...state, startedAt: undefined };
+
+    // ACT & ASSERT:
+    await expect(
+      makeFinalizeNode(prisma)(stateWithoutStartedAt, {
+        configurable: { thread_id: crypto.randomUUID() },
+      } as never),
+    ).rejects.toThrow("Missing required state property: startedAt");
   });
 
   it("throws if config.configurable.thread_id is missing", async () => {

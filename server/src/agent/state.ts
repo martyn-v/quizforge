@@ -19,6 +19,12 @@ const QuizState = new StateSchema({
   quiz: QuizSchema.optional().describe(
     "The persisted quiz with database ids, from persistQuiz",
   ),
+  // An ISO string, not a Date: the checkpoint serializer revives a Date
+  // as a plain string, so a Date type here would lie after a round trip.
+  startedAt: z
+    .string()
+    .optional()
+    .describe("The ISO time the attempt started, stamped by persistQuiz"),
   answers: AnswersSchema.default({}).describe(
     "The selected option ids per question id, from askQuestion",
   ),

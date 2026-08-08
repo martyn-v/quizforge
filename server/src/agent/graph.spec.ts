@@ -120,6 +120,7 @@ describe("the quiz graph", () => {
       source: "# Title",
       draft: fakeDraft,
       quiz: makeQuiz(quizId),
+      startedAt: expect.any(String) as unknown,
       answers: {
         [qid(0)]: correctSelections[0],
         [qid(1)]: correctSelections[1],

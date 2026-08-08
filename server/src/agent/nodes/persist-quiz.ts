@@ -71,7 +71,7 @@ export function makePersistQuizNode(
         })),
       };
 
-      return { quiz };
+      return { quiz, startedAt: new Date().toISOString() };
     } catch (error) {
       throw new PersistQuizError(
         `Quiz could not be saved: ${error instanceof Error ? error.message : String(error)}`,

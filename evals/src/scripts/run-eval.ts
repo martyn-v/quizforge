@@ -35,6 +35,7 @@ for (const fixture of loadManifest()) {
         source,
         draft: undefined,
         quiz: undefined,
+        startedAt: undefined,
         answers: {},
         scores: {},
         finalScore: undefined,

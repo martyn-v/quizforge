@@ -10,6 +10,7 @@ const state: typeof QuizState.State = {
   source: "This is a test.",
   draft: makeDraft(),
   quiz: undefined,
+  startedAt: undefined,
   answers: {},
   scores: {},
   finalScore: undefined,
@@ -28,7 +29,10 @@ describe("persistQuizNode", () => {
 
     // ASSERT:
     assert.notInstanceOf(result, CommandInstance);
-    expect(result).toEqual({ quiz: makeQuiz(quizId) });
+    expect(result).toEqual({
+      quiz: makeQuiz(quizId),
+      startedAt: expect.any(String) as unknown,
+    });
 
     expect(prisma.quiz.create).toHaveBeenCalledWith({
       data: {

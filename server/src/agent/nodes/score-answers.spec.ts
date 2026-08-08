@@ -26,6 +26,7 @@ const state: typeof QuizState.State = {
   source: "This is a test.",
   draft: undefined,
   quiz: makeQuiz(QUIZ_ID),
+  startedAt: undefined,
   answers: correctAnswers,
   scores: {},
   finalScore: undefined,

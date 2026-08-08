@@ -13,6 +13,10 @@ export function makeFinalizeNode(
       throw new InvalidStateError("Missing required state property: quiz");
     }
 
+    if (!state.startedAt) {
+      throw new InvalidStateError("Missing required state property: startedAt");
+    }
+
     if (!config.configurable?.thread_id) {
       throw new InvalidStateError(
         "Missing required config property: thread_id",
@@ -40,7 +44,7 @@ export function makeFinalizeNode(
         quizId: state.quiz.id,
         threadId: config.configurable.thread_id as string,
         finalScore: state.finalScore,
-        startedAt: new Date(), // FIXME: This should be the actual start time of the attempt, not now.
+        startedAt: state.startedAt,
         answers: {
           create: state.quiz.questions.map((question) => ({
             questionId: question.id,
