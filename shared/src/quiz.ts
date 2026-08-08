@@ -28,9 +28,7 @@ export type DraftQuestion = z.infer<typeof DraftQuestionSchema>;
 export const DraftQuizSchema = z.object({
   title: z.string().describe("The title of the quiz"),
   description: z.string().optional().describe("The description of the quiz"),
-  questions: z
-    .array(DraftQuestionSchema)
-    .describe("The questions in the quiz"),
+  questions: z.array(DraftQuestionSchema).describe("The questions in the quiz"),
 });
 export type DraftQuiz = z.infer<typeof DraftQuizSchema>;
 
@@ -90,3 +88,22 @@ export type Answers = z.infer<typeof AnswersSchema>;
 
 export const ScoresSchema = z.record(z.uuid(), z.number());
 export type Scores = z.infer<typeof ScoresSchema>;
+
+export const StartSessionResponseSchema = z.object({
+  sessionId: z.uuid().describe("The session id; also the graph thread id"),
+  question: AskQuestionPayloadSchema.describe("The first question"),
+});
+export type StartSessionResponse = z.infer<typeof StartSessionResponseSchema>;
+
+export const QuizResultSchema = z.object({
+  finalScore: z.number().describe("The total score for the quiz attempt"),
+  scores: ScoresSchema.describe("The scores for each question"),
+  attemptId: z.uuid().describe("The database id of the attempt"),
+});
+export type QuizResult = z.infer<typeof QuizResultSchema>;
+
+export const SubmitAnswerResponseSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("question"), question: AskQuestionPayloadSchema }),
+  z.object({ kind: z.literal("result"), result: QuizResultSchema }),
+]);
+export type SubmitAnswerResponse = z.infer<typeof SubmitAnswerResponseSchema>;

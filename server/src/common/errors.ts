@@ -1,36 +1,19 @@
-export class InvalidAnswerError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "InvalidAnswerError";
+export abstract class AgentError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
+    this.name = new.target.name;
   }
 }
 
-export class InvalidStateError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "InvalidStateError";
-  }
-}
+export class InvalidAnswerError extends AgentError {}
+
+export class InvalidStateError extends AgentError {}
 
 /** The source document could not be read. */
-export class FetchSourceError extends Error {
-  constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = "FetchSourceError";
-  }
-}
+export class FetchSourceError extends AgentError {}
 
 /** The questions could not be generated */
-export class GenerateQuestionsError extends Error {
-  constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = "GenerateQuestionsError";
-  }
-}
+export class GenerateQuestionsError extends AgentError {}
 
-export class PersistQuizError extends Error {
-  constructor(message: string, options?: { cause?: unknown }) {
-    super(message, options);
-    this.name = "PersistQuizError";
-  }
-}
+/** There was an error persisting the quiz */
+export class PersistQuizError extends AgentError {}
