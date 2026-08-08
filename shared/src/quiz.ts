@@ -89,6 +89,19 @@ export type Answers = z.infer<typeof AnswersSchema>;
 export const ScoresSchema = z.record(z.uuid(), z.number());
 export type Scores = z.infer<typeof ScoresSchema>;
 
+export const StartSessionRequestSchema = z.object({
+  url: z.url().describe("The url of the Markdown source document"),
+});
+export type StartSessionRequest = z.infer<typeof StartSessionRequestSchema>;
+
+// Shape only. The semantic checks (uuid, cardinality, membership) live
+// in the interrupt loop, which re-prompts with a reason instead of
+// rejecting, so a stale client never gets a 400 for a wrong answer.
+export const SubmitAnswerRequestSchema = z.object({
+  selections: z.array(z.string()).describe("The selected option ids"),
+});
+export type SubmitAnswerRequest = z.infer<typeof SubmitAnswerRequestSchema>;
+
 export const StartSessionResponseSchema = z.object({
   sessionId: z.uuid().describe("The session id; also the graph thread id"),
   question: AskQuestionPayloadSchema.describe("The first question"),

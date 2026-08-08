@@ -5,6 +5,8 @@ import {
   PublicQuestionSchema,
   QuizSchema,
   ResumeSchema,
+  StartSessionRequestSchema,
+  SubmitAnswerRequestSchema,
 } from "./quiz";
 
 const OPTION_ID = "00000000-0000-4000-8000-200000000000";
@@ -86,6 +88,42 @@ describe("ResumeSchema", () => {
     { label: "a number", selections: [2] },
   ])("rejects $label", ({ selections }) => {
     expect(ResumeSchema.safeParse({ selections }).success).toBe(false);
+  });
+});
+
+describe("StartSessionRequestSchema", () => {
+  it("accepts a body with a url", () => {
+    const parsed = StartSessionRequestSchema.safeParse({
+      url: "https://github.com/o/r/blob/main/README.md",
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it.each([
+    { label: "a missing url", body: {} },
+    { label: "a non-url string", body: { url: "not a url" } },
+  ])("rejects $label", ({ body }) => {
+    expect(StartSessionRequestSchema.safeParse(body).success).toBe(false);
+  });
+});
+
+describe("SubmitAnswerRequestSchema", () => {
+  // The schema checks shape only. Semantic checks (uuid, cardinality,
+  // membership) live in the interrupt loop, which re-prompts instead of
+  // rejecting, so a stale client sees a reason and not a 400.
+  it("accepts any array of strings as selections", () => {
+    const parsed = SubmitAnswerRequestSchema.safeParse({
+      selections: ["not-a-uuid"],
+    });
+    expect(parsed.success).toBe(true);
+  });
+
+  it.each([
+    { label: "a missing selections field", body: {} },
+    { label: "a number in selections", body: { selections: [2] } },
+    { label: "a bare string", body: { selections: "abc" } },
+  ])("rejects $label", ({ body }) => {
+    expect(SubmitAnswerRequestSchema.safeParse(body).success).toBe(false);
   });
 });
 
