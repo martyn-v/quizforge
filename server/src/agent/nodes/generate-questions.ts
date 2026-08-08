@@ -23,12 +23,31 @@ Rules:
 - The questions and options must be in the same language as the source material.
 `;
 
+/**
+ * True when the provider rejected a malformed tool call from the model.
+ * Groq validates the JSON of a tool call on the server. A malformed call
+ * returns a 400 with the code "tool_use_failed", not a local parse error.
+ * The check reads the error body by shape, so this file stays free of
+ * provider imports. It accepts both body nestings the SDK produces.
+ */
+function isToolUseFailure(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+  const body = (error as { error?: { code?: unknown; error?: { code?: unknown } } })
+    .error;
+  return (
+    body?.code === "tool_use_failed" || body?.error?.code === "tool_use_failed"
+  );
+}
+
 /** True when the model answered but the output does not match the schema. */
 function isSchemaFailure(error: unknown): boolean {
   return (
     error instanceof z.ZodError ||
     error instanceof OutputParserException ||
-    error instanceof SyntaxError
+    error instanceof SyntaxError ||
+    isToolUseFailure(error)
   );
 }
 

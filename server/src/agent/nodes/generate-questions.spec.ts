@@ -75,6 +75,43 @@ describe("generateQuestionsNode", () => {
     expect(feedback.content).toContain("title");
   });
 
+  it("re-prompts when the provider rejects a malformed tool call", async () => {
+    // Groq validates tool call JSON on the server. A malformed call
+    // comes back as a 400 BadRequestError with code tool_use_failed,
+    // not as a local parse error. The repair round must still engage.
+    const llm = new FakeListChatModel({
+      responses: [JSON.stringify(fakeQuiz)],
+    });
+    const groqError = Object.assign(
+      new Error('400 {"error":{"code":"tool_use_failed"}}'),
+      {
+        status: 400,
+        error: {
+          error: {
+            message: "Failed to call a function. Please adjust your prompt.",
+            type: "invalid_request_error",
+            code: "tool_use_failed",
+            failed_generation: '{"title": "broken"',
+          },
+        },
+      },
+    );
+    const llmSpy = vi.spyOn(llm, "invoke").mockRejectedValueOnce(groqError);
+
+    const result = await makeGenerateQuestionsNode(llm, 2)(state, {} as never);
+
+    assert.notInstanceOf(result, CommandInstance);
+    assert.isDefined(result.draft);
+    assert.equal(result.draft.title, "hello");
+    expect(llmSpy).toHaveBeenCalledTimes(2);
+
+    const [retryInput] = llmSpy.mock.calls[1];
+    const retryMessages = retryInput as BaseMessage[];
+    const feedback = retryMessages[retryMessages.length - 1];
+
+    expect(feedback.content).toContain("schema");
+  });
+
   it("raises model call errors immediately without retrying", async () => {
     const llm = new FakeListChatModel({
       responses: ['{"title":"hello"}'],
