@@ -68,8 +68,8 @@ export function makeDbQuiz(quizId: string) {
     sourceUrl: "https://raw.githubusercontent.com/owner/repo/main/README.md",
     title: draft.title,
     description: draft.description ?? null,
-    strategy: "todo",
-    model: "todo",
+    strategy: "strategy",
+    model: "modelName",
     createdAt: new Date(),
     questions: draft.questions.map((q, qi) => ({
       id: qid(qi),

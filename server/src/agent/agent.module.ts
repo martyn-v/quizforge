@@ -5,6 +5,7 @@ import { generationStrategyProvider } from "./providers/generation-strategy.prov
 import { AgentService } from "./agent.service";
 import { prismaProvider } from "./providers/prisma.provider";
 import { ScoringModule } from "../scoring/scoring.module";
+import { llmModelNameProvider } from "./providers/llm-model-name.provider";
 
 @Module({
   imports: [ScoringModule],
@@ -13,6 +14,7 @@ import { ScoringModule } from "../scoring/scoring.module";
     prismaProvider,
     checkpointerProvider,
     llmProvider,
+    llmModelNameProvider,
     generationStrategyProvider,
   ],
   exports: [AgentService],

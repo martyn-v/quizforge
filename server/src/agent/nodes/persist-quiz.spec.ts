@@ -25,7 +25,10 @@ describe("persistQuizNode", () => {
     prisma.quiz.create.mockResolvedValue(makeDbQuiz(quizId));
 
     // ACT:
-    const result = await makePersistQuizNode(prisma)(state, {} as never);
+    const result = await makePersistQuizNode(prisma, {
+      strategy: "strategy",
+      model: "modelName",
+    })(state, {} as never);
 
     // ASSERT:
     assert.notInstanceOf(result, CommandInstance);
@@ -40,8 +43,8 @@ describe("persistQuizNode", () => {
           "https://raw.githubusercontent.com/owner/repo/main/README.md",
         title: "hello",
         description: "this is a quiz",
-        strategy: "todo",
-        model: "todo",
+        strategy: "strategy",
+        model: "modelName",
         questions: {
           create: makeDraft().questions.map((q, qi) => ({
             position: qi,
@@ -72,10 +75,10 @@ describe("persistQuizNode", () => {
     const stateWithQuiz = { ...state, quiz: makeQuiz(crypto.randomUUID()) };
 
     // ACT:
-    const result = await makePersistQuizNode(prisma)(
-      stateWithQuiz,
-      {} as never,
-    );
+    const result = await makePersistQuizNode(prisma, {
+      strategy: "strategy",
+      model: "modelName",
+    })(stateWithQuiz, {} as never);
 
     // ASSERT:
     assert.notInstanceOf(result, CommandInstance);
@@ -90,7 +93,10 @@ describe("persistQuizNode", () => {
 
     // ACT & ASSERT:
     await expect(
-      makePersistQuizNode(prisma)(stateWithoutDraft, {} as never),
+      makePersistQuizNode(prisma, {
+        strategy: "strategy",
+        model: "modelName",
+      })(stateWithoutDraft, {} as never),
     ).rejects.toThrowError(InvalidStateError);
   });
 
@@ -101,7 +107,10 @@ describe("persistQuizNode", () => {
     prisma.quiz.create.mockRejectedValue(dbError);
 
     // ACT:
-    const promise = makePersistQuizNode(prisma)(state, {} as never);
+    const promise = makePersistQuizNode(prisma, {
+      strategy: "strategy",
+      model: "modelName",
+    })(state, {} as never);
 
     // ASSERT: class, message, and preserved cause each checked on their own.
     // toThrowError(new PersistQuizError(...)) compares only the message.

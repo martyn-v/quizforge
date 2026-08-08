@@ -65,6 +65,7 @@ function makeService() {
     checkpointer,
     llm,
     generationStrategy,
+    "modelName",
     prisma as never,
     scoringService,
   );
@@ -85,6 +86,7 @@ describe("AgentService", () => {
       checkpointer,
       prisma,
       scoringService,
+      { model: "modelName", strategy: generationStrategy },
     );
   });
 

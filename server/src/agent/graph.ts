@@ -33,11 +33,12 @@ export function buildQuizGraph(
   checkpointer: BaseCheckpointSaver,
   prisma: PrismaClient,
   scoringService: ScoringService,
+  quizMeta: { model: string; strategy: string },
 ) {
   return new StateGraph(QuizState)
     .addNode("fetchSource", makeFetchSourceNode())
     .addNode("generateQuestions", makeGenerateQuestionsNode(llm))
-    .addNode("persistQuiz", makePersistQuizNode(prisma))
+    .addNode("persistQuiz", makePersistQuizNode(prisma, quizMeta))
     .addNode("askQuestion", makeAskQuestionNode())
     .addNode("scoreAnswers", makeScoreAnswersNode(scoringService))
     .addNode("finalize", makeFinalizeNode(prisma))

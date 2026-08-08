@@ -29,6 +29,7 @@ import {
   StartSessionResponse,
   SubmitAnswerResponse,
 } from "@quizforge/shared";
+import { LLM_MODEL_NAME } from "./providers/llm-model-name.provider";
 
 /** Compiles the graph once at startup and holds it. */
 @Injectable()
@@ -39,7 +40,8 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     @Inject(CHECKPOINTER) private readonly checkpointer: BaseCheckpointSaver,
     @Inject(LLM_PROVIDER) private llm: BaseChatModel,
     @Inject(GENERATION_STRATEGY_PROVIDER)
-    private _generationStrategy: GenerationStrategy,
+    private generationStrategy: GenerationStrategy,
+    @Inject(LLM_MODEL_NAME) private llmModelName: string,
     @Inject(PRISMA) private prisma: PrismaClient,
     private readonly scoringService: ScoringService,
   ) {}
@@ -50,6 +52,10 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
       this.checkpointer,
       this.prisma,
       this.scoringService,
+      {
+        model: this.llmModelName,
+        strategy: this.generationStrategy,
+      },
     );
   }
 

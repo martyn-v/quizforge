@@ -7,6 +7,7 @@ import { fromDbQuestionType, toDbQuestionType } from "../question-type-map";
 
 export function makePersistQuizNode(
   prisma: PrismaClient,
+  quizMeta: { model: string; strategy: string },
 ): GraphNode<typeof QuizState> {
   return async (state) => {
     if (state.quiz) {
@@ -28,8 +29,8 @@ export function makePersistQuizNode(
           sourceUrl: state.readme_url,
           title: state.draft.title,
           description: state.draft.description,
-          strategy: "todo",
-          model: "todo",
+          strategy: quizMeta.strategy,
+          model: quizMeta.model,
           questions: {
             create: state.draft.questions.map((q, qi) => ({
               position: qi,

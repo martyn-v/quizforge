@@ -33,6 +33,7 @@ function makeService() {
     new MemorySaver(),
     new FakeListChatModel({ responses: [JSON.stringify(makeDraft())] }),
     {} as never,
+    "modelName",
     prisma,
     new ScoringService(
       MULTIPLE_CHOICE_SCORING_STRATEGY[MultipleChoiceScoringMode.SPEC],
@@ -69,10 +70,7 @@ describe("AgentService against the real graph", () => {
     });
 
     // Walk the quiz. Each submit response must match a fresh read.
-    let response = await service.submitAnswer(
-      started.sessionId,
-      selections[0],
-    );
+    let response = await service.submitAnswer(started.sessionId, selections[0]);
     for (let i = 1; i < selections.length; i++) {
       expect(response).toMatchObject({
         kind: "question",

@@ -46,6 +46,10 @@ function buildTestGraph(
     new ScoringService(
       MULTIPLE_CHOICE_SCORING_STRATEGY[MultipleChoiceScoringMode.SPEC],
     ),
+    {
+      model: "modelName",
+      strategy: "strategy",
+    },
   );
 }
 
