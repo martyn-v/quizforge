@@ -118,7 +118,6 @@ export async function fetchGithubReadme(url: string): Promise<string> {
 export function makeFetchSourceNode(): GraphNode<typeof QuizState> {
   return async (state) => {
     // Validate before converting, so the error names the url the user typed.
-    // TODO: error handling: the node should not throw, but return a state with an error message.
     assertGithubMarkdownUrl(state.readme_url);
 
     const readme_url = toRawGithubUrl(state.readme_url);

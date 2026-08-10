@@ -43,9 +43,9 @@ Rules:
 Endpoints:
 
 - [x] `AgentService` exposes a callable surface, not the graph object: `startSession(url)` and `submitAnswer(sessionId, selections)`. This is the boundary that strips `isCorrect`, so a controller cannot return raw graph state
-- [x] `QuizModule`: thin controllers over that surface. It imports `AgentModule`, and `AgentModule` imports `ScoringModule` for the `scoreAnswer` node
+- [x] `QuizModule`: thin controllers over that surface. It imports `AgentModule`, and `AgentModule` imports `ScoringModule` for the `scoreAnswers` node
 - [x] `POST /sessions`: start graph, run to first interrupt, return question 1 (streaming response, see Phase 3.5)
-- [x] `POST /sessions/:id/answers`: resume with `Command({ resume })`, return next question or final score (streaming response)
+- [x] `POST /sessions/:id/answers`: resume with `Command({ resume })`, return next question or final score (plain JSON; a resume makes no LLM call, so there is no progress to stream)
 - [x] `GET /sessions/:id`: read current state
 - [x] Build the endpoints JSON-first, then upgrade to SSE in Phase 3.5; keep a `?stream=false` fallback for curl demos and tests
 
@@ -74,7 +74,7 @@ Tests and evals:
 
 Tier 1, progress streaming (do this one first):
 
-- [x] Bridge the graph's stream into an SSE response: LangGraph async iterator to RxJS observable, NestJS `@Sse()` / manual SSE write on the POST endpoints
+- [x] Bridge the graph's stream into an SSE response: LangGraph async iterator to RxJS observable, NestJS `@Sse()` / manual SSE write on the session start endpoint
 - [x] Emit node-level progress events during session start: fetching source, generating questions, validating
 - [x] Boundary rule: stream progress only, never partial question JSON (half-parsed structured output is brittle, and raw generation contains the correct flags)
 - [x] Vue side: parse the SSE stream via `fetch` + `ReadableStream` (native `EventSource` is GET-only, endpoints are POSTs)
@@ -83,7 +83,7 @@ Tier 2, conversational framing (stretch, first thing cut):
 
 - [ ] `askQuestion` node produces a short LLM framing line per question; tokens stream to the UI, structured question payload follows when the interrupt lands
 - [ ] Answer channel stays structured buttons; no free text touches scoring
-- [ ] Event protocol: `progress` | `token` | `question` | `result`, typed in `shared`
+- [x] Event protocol: `progress` | `token` | `question` | `result`, typed in `shared`. Shipped with Tier 1, plus an `error` member; the `token` member is reserved and nothing emits it yet
 
 ## Phase 4: Rehearsal (2 hours, separate day)
 

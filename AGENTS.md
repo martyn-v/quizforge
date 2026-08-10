@@ -48,8 +48,8 @@ implementing something else.
    behind `SCORING_MODE`.
 4. **Payloads land whole.** Stream progress events and framing tokens;
    never stream partial question JSON. The SSE event union
-   (`progress | token | question | result`) lives in `shared` and both
-   sides import it.
+   (`progress | token | question | result | error`) lives in `shared`
+   and both sides import it.
 5. **Prompt changes require eval evidence.** Run `pnpm eval` before and
    after any change to generation prompts or strategies; do not judge
    question quality by eyeballing one output. Structural checks (4

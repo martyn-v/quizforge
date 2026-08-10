@@ -23,7 +23,6 @@ export function makePersistQuizNode(
     }
 
     try {
-      // TODO: fill missing fields
       const created = await prisma.quiz.create({
         data: {
           sourceUrl: state.readme_url,

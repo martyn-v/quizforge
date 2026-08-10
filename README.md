@@ -14,21 +14,21 @@ One LangGraph graph controls the full session. The graph is checkpointed to
 Postgres:
 
 ```
-fetchSource -> generateQuestions -> askQuestion -> scoreAnswer
-                                        ^               |
-                                        |  more questions
-                                        +---------------+
-                                                        |
-                                                   all answered
-                                                        v
-                                                    finalize
+fetchSource -> generateQuestions -> persistQuiz -> askQuestion -> scoreAnswers -> finalize
+                                                       |
+                                             loops inside the node:
+                                             one interrupt() per question
 ```
 
-The **askQuestion** node makes a durable pause. The node calls `interrupt()`
-with the question payload. The graph then writes a checkpoint. The process can
-stop and start again between the question and the answer. The answer arrives
-as a `Command({ resume: selectedOptionIds })`. The graph then continues from
-the checkpoint. The REST API only starts and resumes the graph:
+The graph is a straight line. The question loop lives inside the
+**askQuestion** node, not in the edges. The node calls `interrupt()` once per
+question with the question payload. Each `interrupt()` makes a durable pause:
+the graph writes a checkpoint, and the process can stop and start again
+between the question and the answer. The answer arrives as a
+`Command({ resume: { selections } })`. The graph then continues from the
+checkpoint. When the last question has a valid answer, **scoreAnswers**
+scores all the answers in one pass. The REST API only starts and resumes the
+graph:
 
 | Endpoint                     | Role                                                             |
 | ---------------------------- | ---------------------------------------------------------------- |
@@ -38,15 +38,17 @@ the checkpoint. The REST API only starts and resumes the graph:
 
 The `thread_id` is the session id.
 
-Both POST endpoints send a stream. The response is SSE with a typed event
-union (`progress | token | question | result`). The `shared` package defines
-this union once, and the API and the web interface both import it. The stream
-sends node progress while the graph runs. It then sends the framing tokens
-that introduce a question. It then sends the question or the final result as
-one complete payload. The API never sends incomplete JSON. The native
+`POST /sessions` sends a stream. The response is SSE with a typed event
+union (`progress | question | result | error`, plus a reserved `token` kind
+for future framing lines). The `shared` package defines this union once, and
+the API and the web interface both import it. The stream sends node progress
+while the graph runs. It then sends the first question or a terminal error
+as one complete payload. The API never sends incomplete JSON. The native
 `EventSource` of the browser accepts GET requests only. The web client
 therefore reads the stream with `fetch` and a `ReadableStream` parser. Add
-`?stream=false` to get plain JSON for curl and for tests.
+`?stream=false` to get plain JSON for curl and for tests. The answers
+endpoint returns plain JSON. A resume makes no LLM call, so it has no
+progress to report.
 
 ## Scoring
 
@@ -75,8 +77,9 @@ the scores.
 selections, and it ignores wrong selections. A user who selects all the
 options therefore gets the maximum score. The rule measures recall, but it
 does not measure precision. The specified rule is the default. The
-`SCORING_MODE` configuration variable selects a different rule. The
-`penalized` rule uses `max(0, correct - wrong)` on a scale of 0 to 4.
+`SCORING_MODE` configuration variable selects a different rule. The `scaled`
+rule keeps the count and puts it on a scale of 0 to 4. The `penalized` rule
+subtracts wrong selections from correct selections and uses the same scale.
 
 ## Assumptions
 
@@ -89,9 +92,10 @@ the decisions, and each decision is reversible:
   human-in-the-loop pauses. A weaker interpretation is an agent for generation
   only, with CRUD for the other steps. That interpretation also meets the
   requirements, but it loses durability and a clear data flow.
-- **The number of questions is configurable between 5 and 8.** The default is
-  6. The generator receives an instruction to mix single-answer and
-  multi-answer questions. Both scoring paths therefore get exercise.
+- **The number of questions is 5 to 8.** The schema enforces the range, and
+  the model selects the count within it. The generator receives an
+  instruction to mix single-answer and multi-answer questions. Both scoring
+  paths therefore get exercise.
 - **Each question has exactly 4 options.** A multi-answer question has 2 or 3
   correct options. Validation rejects a multi-answer question that has 4
   correct options. Such a question cannot show the difference between
@@ -159,14 +163,16 @@ These are the important parts of the design:
   question generation. On a validation failure, the model receives the errors
   one time. A second failure stops the session with an error. The application
   does not serve a malformed quiz.
-- **Progress and prose stream. Payloads arrive complete.** Node updates and
-  framing tokens stream token by token. Questions and results arrive as
-  complete validated objects. Streamed structured output would make the client
-  parse incomplete JSON. It would also send the raw generation, which contains
-  the correct answers.
+- **Progress streams. Payloads arrive complete.** Node updates stream as
+  they happen. The reserved `token` event kind keeps the same boundary open
+  for future framing lines. Questions and results arrive as complete
+  validated objects. Streamed structured output would make the client parse
+  incomplete JSON. It would also send the raw generation, which contains the
+  correct answers.
 - **DI tokens make the seams.** The LLM provider and the generation strategy
   are behind interfaces. Configuration selects them, not a code change. The
-  default provider is Groq. Ollama is available for local runs.
+  default provider is Ollama, so a local run needs no key. Groq is available
+  by configuration.
 
 ## Strategies
 
@@ -213,7 +219,7 @@ gives a score to the generator. It never gives a score to the user.
 ```
 mise install                  # installs the Node and pnpm versions from mise.toml
 docker compose up -d          # starts Postgres
-cp .env.example .env          # add your GROQ_API_KEY
+cp .env.example .env          # local Ollama by default; set GROQ_API_KEY for Groq
 pnpm install
 pnpm prisma migrate dev       # creates the domain tables
 pnpm dev                      # API on :3000, web on :5173
@@ -221,8 +227,7 @@ pnpm eval                     # optional: gives generation quality a score
 ```
 
 The checkpointer creates its own tables. Open the web interface. Give it a
-Markdown URL. The `.env.example` file contains two examples. Then answer the
-questions.
+Markdown URL on GitHub. Then answer the questions.
 
 ## Observability
 
@@ -243,15 +248,11 @@ not fail the eval run.
 
 ## Roadmap
 
-- **Error events over SSE.** Nodes throw typed errors (`FetchSourceError`,
-  `GenerateQuestionsError`). Failure ends the run, so no error value is
-  written into the graph state. `AgentService` catches the error and maps
-  the error class to a new `error` member of the typed event union. The
-  event carries a code and a fixed, user-safe message. The raw cause stays
-  in the server log. The checkpoint stays at the last successful node, so
-  a retry on the same thread resumes at the failed node. Inside the
-  interrupt loop the rule does not change: an invalid answer causes a
-  re-prompt, never a throw.
+- **An error `code` on SSE `error` events.** The stream already ends with a
+  typed `error` event that carries a fixed, user-safe message, and the raw
+  cause stays in the server log. A `code` field mapped from the error class
+  would let the web interface act on the cause, for example offer a retry
+  after a fetch failure.
 - **A `status` column on the `Quiz` row.** A reloaded page cannot see a
   past `error` event. The same catch site writes the failure to the domain
   table. This work waits until the web interface needs reconnect.
@@ -270,15 +271,14 @@ not fail the eval run.
   of each session. The benefit at this scale is too small.
 - **The application runs in one process.** The Postgres checkpointer permits
   horizontal scaling, but nothing here needs it.
-- **`ScoringService.scoreQuestion` still validates the answer.** Validation
-  and scoring are two different tasks, and they occur at different times.
-  Validation must occur immediately after the answer arrives, so `askQuestion`
-  can catch the error and ask the question again. Scoring can occur later. One
-  method for both tasks is acceptable while `scoreAnswer` runs after each
-  answer. It becomes incorrect if scoring moves to `finalize`, because the
-  user then learns about a bad answer after the last question. The correction
-  is a separate `validateAnswer` method. This work waits until the node
-  exists.
+- **Answer validation exists in two places.** The interrupt loop in
+  `askQuestion` validates each answer inline and re-prompts on a bad one,
+  because that loop must never throw. `ScoringService.scoreQuestion`
+  validates again and throws, because a pure scoring function must not trust
+  its inputs. The rules therefore exist twice, and both sides have tests. A
+  shared `validateAnswer` method that returns a reason instead of an
+  exception would remove the duplication. The benefit at this scale is too
+  small.
 - **HTTP tests replace `fetch`. They do not intercept it.** The tests put a
   stub in the place of the global `fetch`, so the real `fetch` never runs.
   The responses are real `Response` objects, so the status and the body

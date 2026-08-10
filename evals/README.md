@@ -94,21 +94,3 @@ answerable from general knowledge but not from the document.
 `pnpm eval:judge` runs the judge over them. The judge must reject every
 planted question. If the judge passes one, the calibration fails and the
 blame is on the judge, not the generator.
-
-## Current status
-
-The harness runs end to end against the real generation node. The runs
-from 2026-08-10 (Groq `llama-3.3-70b-versatile` generator, `gemma4:31b`
-judge) show three open generation defects:
-
-- The left-pad fixture produces a quiz with no multi-answer question.
-  The mix check flags it.
-- The langgraphjs fixture fails generation: a multi-answer question has
-  4 correct options, and the repair round does not fix it.
-- The gemma4 generator reveals the answer count in question text, for
-  example "select 2". The count-leak check flags it.
-
-The next step is a generation prompt change that addresses these
-defects, with the current scorecards as the before half of the
-evidence pair. The pipecat fixture is blocked by the Groq free-tier
-rate limit, not by a generation defect.
