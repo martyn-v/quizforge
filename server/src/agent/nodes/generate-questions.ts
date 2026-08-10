@@ -103,8 +103,12 @@ export function makeGenerateQuestionsNode(
           );
         }
         if (attempt >= max_attempts) {
+          // No failure detail here: a parser failure embeds the raw
+          // model output, isCorrect flags included, and this message
+          // crosses the wire in error responses (AGENTS.md rule 2).
+          // The cause keeps the detail for logs and traces.
           throw new GenerateQuestionsError(
-            `Output did not match the schema after ${attempt} attempts: ${describeFailure(error)}`,
+            `The model output did not match the quiz schema after ${attempt} attempt(s)`,
             { cause: error },
           );
         }

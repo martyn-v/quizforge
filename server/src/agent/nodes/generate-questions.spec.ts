@@ -78,6 +78,36 @@ describe("generateQuestionsNode", () => {
     expect(feedback.content).toContain("title");
   });
 
+  it("keeps the raw model output out of the exhausted-attempts error", async () => {
+    // ARRANGE: a parser failure embeds the raw output, isCorrect flags
+    // included, in its own message. The node error message crosses the
+    // wire in an error response, so the raw text must stay in the cause
+    // (AGENTS.md rule 2); only the model sees it during repair rounds.
+    const llm = new FakeListChatModel({ responses: ["unused"] });
+    const parserError = Object.assign(
+      new Error(
+        'Failed to parse. Text: "{"options":[{"text":"a","isCorrect":true}]}"',
+      ),
+      { lc_error_code: "OUTPUT_PARSING_FAILURE" },
+    );
+    vi.spyOn(llm, "invoke").mockRejectedValue(parserError);
+
+    // ACT:
+    let thrown: unknown = new Error("the node did not throw");
+    try {
+      await makeGenerateQuestionsNode(llm, 1)(state, {} as never);
+    } catch (error) {
+      thrown = error;
+    }
+
+    // ASSERT: the class and attempt count survive, the raw text does not.
+    expect(thrown).toBeInstanceOf(GenerateQuestionsError);
+    const error = thrown as GenerateQuestionsError;
+    expect(error.message).toContain("1 attempt");
+    expect(error.message).not.toContain("isCorrect");
+    expect(error.cause).toBe(parserError);
+  });
+
   it("re-prompts when the provider rejects a malformed tool call", async () => {
     // Groq validates tool call JSON on the server. A malformed call
     // comes back as a 400 BadRequestError with code tool_use_failed,
