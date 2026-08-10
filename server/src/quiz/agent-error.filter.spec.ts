@@ -35,6 +35,22 @@ describe("AgentErrorFilter", () => {
     });
   });
 
+  it("maps a subclass of a mapped error to the ancestor status", () => {
+    class RawFetchError extends FetchSourceError {}
+    const { host, status, json } = makeHost();
+
+    new AgentErrorFilter().catch(new RawFetchError("bad blob url"), host);
+
+    expect(status).toHaveBeenCalledExactlyOnceWith(
+      HttpStatus.UNPROCESSABLE_ENTITY,
+    );
+    expect(json).toHaveBeenCalledExactlyOnceWith({
+      statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+      error: "RawFetchError",
+      message: "bad blob url",
+    });
+  });
+
   it("maps an unmapped agent error to a 500", () => {
     const { host, status, json } = makeHost();
 
