@@ -1,5 +1,6 @@
 import { ChatOllama } from "@langchain/ollama";
 import { ChatGroq } from "@langchain/groq";
+import { ChatAnthropic } from "@langchain/anthropic";
 import { buildJudgeModel, buildGeneratorModel } from "./model-factory.ts";
 
 describe("buildJudgeModel", () => {
@@ -58,6 +59,24 @@ describe("buildJudgeModel", () => {
     expect((model as ChatGroq).model).toBe("llama-3.3-70b-versatile");
   });
 
+  it("builds an Anthropic judge with a default model", () => {
+    const model = buildJudgeModel({
+      JUDGE_PROVIDER: "anthropic",
+      ANTHROPIC_API_KEY: "test",
+    });
+    expect(model).toBeInstanceOf(ChatAnthropic);
+    expect((model as ChatAnthropic).model).toBe("claude-haiku-4-5-20251001");
+  });
+
+  it("does not send a temperature to an Anthropic judge", () => {
+    const model = buildJudgeModel({
+      JUDGE_PROVIDER: "anthropic",
+      ANTHROPIC_API_KEY: "test",
+      JUDGE_TEMPERATURE: "0.3",
+    }) as ChatAnthropic;
+    expect(model.temperature).toBeUndefined();
+  });
+
   it("throws on an unknown provider", () => {
     expect(() => buildJudgeModel({ JUDGE_PROVIDER: "openai" })).toThrow(
       "Unknown JUDGE_PROVIDER: openai",
@@ -99,5 +118,25 @@ describe("buildGeneratorModel", () => {
       GROQ_API_KEY: "test",
     });
     expect(model).toBeInstanceOf(ChatGroq);
+  });
+
+  it("builds Anthropic when LLM_PROVIDER is anthropic", () => {
+    const model = buildGeneratorModel({
+      LLM_PROVIDER: "anthropic",
+      ANTHROPIC_API_KEY: "test",
+    });
+    expect(model).toBeInstanceOf(ChatAnthropic);
+    expect((model as ChatAnthropic).model).toBe("claude-haiku-4-5-20251001");
+  });
+
+  it("honors ANTHROPIC_MODEL and ignores LLM_TEMPERATURE for Anthropic", () => {
+    const model = buildGeneratorModel({
+      LLM_PROVIDER: "anthropic",
+      ANTHROPIC_API_KEY: "test",
+      ANTHROPIC_MODEL: "claude-opus-5",
+      LLM_TEMPERATURE: "0.7",
+    }) as ChatAnthropic;
+    expect(model.model).toBe("claude-opus-5");
+    expect(model.temperature).toBeUndefined();
   });
 });

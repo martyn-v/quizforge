@@ -22,18 +22,23 @@ given.
 ## Configuration
 
 The generator uses the server variables: `LLM_PROVIDER`, `OLLAMA_MODEL`,
-`GROQ_MODEL`, `LLM_TEMPERATURE`, `LLM_THINK`, `GENERATION_STRATEGY`. The
+`GROQ_MODEL`, `ANTHROPIC_MODEL`, `LLM_TEMPERATURE`, `LLM_THINK`,
+`GENERATION_STRATEGY`. The
 eval generator mirrors the server seam, so the scorecard measures the
 model and strategy configuration that the application ships. The runner
 resolves the strategy from the same registry as the server, so the
 strategy label in the results JSON names the code that ran. The judge has its own seam, so it can run on a
 different model than the generator:
 
-- `JUDGE_PROVIDER`: `ollama` (default) or `groq`.
+- `JUDGE_PROVIDER`: `ollama` (default), `groq` or `anthropic`.
 - `JUDGE_OLLAMA_MODEL`: required for Ollama. Pick a model different from
   the generator model.
 - `JUDGE_GROQ_MODEL`: optional, defaults to `llama-3.3-70b-versatile`.
+- `JUDGE_ANTHROPIC_MODEL`: optional, defaults to
+  `claude-haiku-4-5-20251001`.
 - `JUDGE_TEMPERATURE`: optional, defaults to `0` for deterministic verdicts.
+  The Anthropic seam does not send a temperature: newer Claude models
+  reject the parameter.
 - `JUDGE_THINK`: optional, defaults to `false`. Thinking models such as
   qwen3.5 reason before every answer, which makes a run slow. Set `true`
   to let the judge reason.

@@ -24,7 +24,8 @@ const comment = process.argv[2] ?? null;
 
 // "provider default" means the variable is unset and the model uses its
 // own default. The judge defaults are set in buildJudgeModel. The model
-// field holds the model of the active provider.
+// field holds the model of the active provider. The Anthropic seam does
+// not send a temperature, so the run records "not sent" for it.
 const generatorProvider = process.env.LLM_PROVIDER ?? "ollama";
 const generatorInfo = {
   provider: generatorProvider,
@@ -32,8 +33,13 @@ const generatorInfo = {
   model:
     generatorProvider === "groq"
       ? (process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile")
-      : (process.env.OLLAMA_MODEL ?? "gemma4:31b"),
-  temperature: process.env.LLM_TEMPERATURE || "provider default",
+      : generatorProvider === "anthropic"
+        ? (process.env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001")
+        : (process.env.OLLAMA_MODEL ?? "gemma4:31b"),
+  temperature:
+    generatorProvider === "anthropic"
+      ? "not sent"
+      : process.env.LLM_TEMPERATURE || "provider default",
   think: process.env.LLM_THINK || "provider default",
 };
 const judgeProvider = process.env.JUDGE_PROVIDER ?? "ollama";
@@ -42,8 +48,13 @@ const judgeInfo = {
   model:
     judgeProvider === "groq"
       ? (process.env.JUDGE_GROQ_MODEL ?? null)
-      : (process.env.JUDGE_OLLAMA_MODEL ?? null),
-  temperature: process.env.JUDGE_TEMPERATURE || "0",
+      : judgeProvider === "anthropic"
+        ? (process.env.JUDGE_ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001")
+        : (process.env.JUDGE_OLLAMA_MODEL ?? null),
+  temperature:
+    judgeProvider === "anthropic"
+      ? "not sent"
+      : process.env.JUDGE_TEMPERATURE || "0",
   think: process.env.JUDGE_THINK || "false",
 };
 

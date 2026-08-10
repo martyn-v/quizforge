@@ -1,6 +1,7 @@
 import { ChatOllama } from "@langchain/ollama";
 import { ChatGroq } from "@langchain/groq";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { ChatAnthropic } from "@langchain/anthropic";
 
 interface ModelOptions {
   apiKey?: string;
@@ -36,6 +37,15 @@ export function buildChatModel(
   options: ModelOptions = {},
 ): BaseChatModel {
   switch (provider) {
+    case "anthropic":
+      // The library default caps output at 2048 tokens. Claude models
+      // spend thinking tokens inside the same cap, so a quiz needs more.
+      return new ChatAnthropic({
+        model,
+        apiKey: options.apiKey,
+        temperature: options.temperature,
+        maxTokens: 16000,
+      });
     case "ollama":
       return new ChatOllama({
         model,
@@ -82,6 +92,14 @@ export function buildJudgeModel(
         env.JUDGE_GROQ_MODEL ?? "llama-3.3-70b-versatile",
         { apiKey: env.GROQ_API_KEY, temperature },
       );
+    case "anthropic":
+      // Claude models newer than Haiku 4.5 reject the temperature
+      // parameter. The seam does not send one, so any model works.
+      return buildChatModel(
+        "anthropic",
+        env.JUDGE_ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001",
+        { apiKey: env.ANTHROPIC_API_KEY },
+      );
     default:
       throw new Error(`Unknown JUDGE_PROVIDER: ${provider}`);
   }
@@ -108,6 +126,14 @@ export function buildGeneratorModel(
         "groq",
         env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
         { apiKey: env.GROQ_API_KEY, temperature },
+      );
+    case "anthropic":
+      // Claude models newer than Haiku 4.5 reject the temperature
+      // parameter. The seam does not send one, so any model works.
+      return buildChatModel(
+        "anthropic",
+        env.ANTHROPIC_MODEL ?? "claude-haiku-4-5-20251001",
+        { apiKey: env.ANTHROPIC_API_KEY },
       );
     default:
       throw new Error(`Unknown LLM_PROVIDER: ${provider}`);

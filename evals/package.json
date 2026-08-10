@@ -11,10 +11,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@langchain/core": "^1.2.4",
-    "@quizforge/shared": "workspace:*",
+    "@langchain/anthropic": "^1.5.4",
+    "@langchain/core": "^1.2.5",
     "@langchain/groq": "1.3.1",
     "@langchain/ollama": "1.3.0",
+    "@quizforge/shared": "workspace:*",
     "dotenv": "^17.4.2",
     "langsmith": "0.8.9",
     "zod": "4.4.3"

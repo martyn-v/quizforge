@@ -1,6 +1,7 @@
 import { ChatOllama } from "@langchain/ollama";
 import { ChatGroq } from "@langchain/groq";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { ChatAnthropic } from "@langchain/anthropic";
 
 import type { FactoryProvider } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -29,6 +30,18 @@ const thinkFrom = (config: ConfigService): boolean | undefined => {
   return raw === "true";
 };
 
+const buildAnthropicModel = (config: ConfigService): ChatAnthropic => {
+  // Claude models newer than Haiku 4.5 reject the temperature
+  // parameter. The seam does not send one, so any model works. The
+  // library default caps output at 2048 tokens. Claude models spend
+  // thinking tokens inside the same cap, so a quiz needs more.
+  return new ChatAnthropic({
+    model: config.get<string>("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001"),
+    apiKey: config.get<string>("ANTHROPIC_API_KEY"),
+    maxTokens: 16000,
+  });
+};
+
 const buildOllamaModel = (config: ConfigService): ChatOllama => {
   return new ChatOllama({
     model: config.get<string>("OLLAMA_MODEL", "gemma4:31b"),
@@ -52,6 +65,8 @@ export const llmProvider = {
   useFactory: (config: ConfigService): BaseChatModel => {
     const provider = config.get<string>("LLM_PROVIDER", "ollama");
     switch (provider) {
+      case "anthropic":
+        return buildAnthropicModel(config);
       case "ollama":
         return buildOllamaModel(config);
       case "groq":

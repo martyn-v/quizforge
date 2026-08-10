@@ -182,8 +182,8 @@ These are the important parts of the design:
   correct answers.
 - **DI tokens make the seams.** The LLM provider and the generation strategy
   are behind interfaces. Configuration selects them, not a code change. The
-  default provider is Ollama, so a local run needs no key. Groq is available
-  by configuration.
+  default provider is Ollama, so a local run needs no key. Groq and
+  Anthropic are available by configuration.
 
 ## Strategies
 
@@ -239,7 +239,7 @@ the fixture manifest and the judge calibration harness.
 ```
 mise install                  # installs Node, pnpm and process-compose from mise.toml
 docker compose up -d          # starts Postgres for the migrate step
-cp .env.example .env          # local Ollama by default; set GROQ_API_KEY for Groq
+cp .env.example .env          # local Ollama by default; set a key for Groq or Anthropic
 pnpm install
 pnpm prisma migrate dev       # creates the domain tables
 pnpm dev                      # API on :3000, web on :5173
@@ -257,9 +257,9 @@ effect. Copy it to `.env` and edit the copy. This table lists the seams:
 
 | Variable                      | Effect                                                       |
 | ----------------------------- | ------------------------------------------------------------ |
-| `LLM_PROVIDER`                | selects `ollama` (default, local) or `groq`                  |
-| `OLLAMA_MODEL`, `GROQ_MODEL`  | select the generation model for each provider                |
-| `LLM_TEMPERATURE`, `LLM_THINK`| tune generation; empty keeps the provider defaults           |
+| `LLM_PROVIDER`                | selects `ollama` (default, local), `groq` or `anthropic`     |
+| `OLLAMA_MODEL`, `GROQ_MODEL`, `ANTHROPIC_MODEL` | select the generation model for each provider |
+| `LLM_TEMPERATURE`, `LLM_THINK`| tune generation; empty keeps the provider defaults; the Anthropic seam does not send them |
 | `GENERATION_STRATEGY`         | selects `single-pass` (default) or `chunked`                 |
 | `SCORING_MODE`                | selects `spec` (default), `scaled` or `penalized`            |
 | `CORS_ORIGIN`                 | sets the accepted web origin, default `http://localhost:5173`|

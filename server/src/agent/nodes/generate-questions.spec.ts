@@ -61,7 +61,7 @@ describe("generateQuestionsNode", () => {
     const [input] = llmSpy.mock.calls[0];
     const [system, human] = input as BaseMessage[];
     expect(system.content).toContain(
-      "You are a helpful assistant that generates questions for a quiz",
+      "You are a quiz generator that generates questions for a quiz",
     );
     expect(human.content).toContain("This is a test.");
   });

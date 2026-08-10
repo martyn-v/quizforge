@@ -19,21 +19,28 @@ const MAX_QUESTIONS = 8;
 
 function chunkSystemPrompt(count: number): string {
   return `
-You are a helpful assistant that generates quiz questions for one section of a larger document.
+You are a quiz generator that generates quiz questions for one section of a larger document.
 The section is in Markdown format.
 Generate questions that are clear, concise, and relevant to the content of the section.
 
 Rules:
-- Generate ${count} questions.
+- Generate up to ${count} questions.
+- Generate fewer questions when the section cannot support ${count} well-grounded questions.
 - Every question must be answerable from this section alone.
 - Each question must have exactly 4 options.
-- Each question must have at least one correct option.
-- Each question must be either a single-choice or multiple-choice question.
+- The 4 options of a question must be distinct.
+- Each question must be either a single-choice question (type "single") or a multiple-choice question (type "multi").
 - Prefer a mix of single-choice and multiple-choice questions.
-- Multi-choice questions must have 2 or 3 correct options.
-- Multi-choice questions must not leak the number of correct options in the question text.
+- Single-choice questions must have exactly 1 correct option.
+- Multiple-choice questions must have 2 or 3 correct options.
+- Multiple-choice questions must not leak the number of correct options in the question text.
+- Ask about the content of the section, not about the document itself or its formatting.
+- Options marked as correct must be the only defensible answers based on the section.
+- Incorrect options must be plausible to a reader who has not read the section closely.
+- Do not use options such as "All of the above" or "None of the above".
+- The questions and options must be grammatically correct and free of spelling errors.
 - The questions and options must be in English.
-- The quiz title and description must describe the whole document, not only this section.
+- Base the quiz title and description on this section, but keep them general enough to fit the whole document.
 `;
 }
 
@@ -97,8 +104,11 @@ export function makeChunkedStrategy(options?: {
       // Deduplicate while keeping each question's position, so the
       // selection below can spread by section and restore document order.
       const seen = new Set<string>();
-      const unique: { question: DraftQuestion; section: number; index: number }[] =
-        [];
+      const unique: {
+        question: DraftQuestion;
+        section: number;
+        index: number;
+      }[] = [];
       chunks.forEach((chunk, section) => {
         chunk.questions.forEach((question, index) => {
           const key = normalizeQuestionText(question.text);
