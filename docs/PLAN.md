@@ -66,7 +66,7 @@ Tests and evals:
 - [ ] Iterate the generation prompt against the eval scorecard, not by eyeballing output; keep before/after scores as the improvement story
 - [ ] Compare the two strategies on the same fixtures with the same judge, so "different strategies" comes with evidence, not vibes
 - [ ] LangSmith tracing on the generation call
-- [ ] Log eval results to LangSmith as experiment runs
+- [x] Log eval results to LangSmith as experiment runs
 - [ ] Second generation strategy behind the strategy interface (e.g. single-pass vs chunked)
 - [x] Repo README: data-flow explanation, quickstart, deliberate "known limitations" section
 
