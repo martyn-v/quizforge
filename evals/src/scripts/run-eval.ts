@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { makeGenerateQuestionsNode } from "../../../server/src/agent/nodes/generate-questions.ts";
+import { GenerateQuestionsError } from "../../../server/src/common/errors.ts";
 import { buildGeneratorModel, buildJudgeModel } from "../model-factory.ts";
 import { loadManifest, loadFixtureSource } from "../fixtures.ts";
 import { DraftQuizSchema } from "../quiz-shape.ts";
@@ -28,22 +29,42 @@ for (const fixture of loadManifest()) {
   console.log(`evaluating ${fixture.id} (${fixture.shape})...`);
   const source = loadFixtureSource(fixture.id);
 
-  const update = await withRateLimitRetry(async () =>
-    generate(
-      {
-        readme_url: fixture.url,
-        source,
-        draft: undefined,
-        quiz: undefined,
-        startedAt: undefined,
-        answers: {},
-        scores: {},
-        finalScore: undefined,
-        attemptId: undefined,
-      },
-      {} as never,
-    ),
-  );
+  let update: unknown;
+  try {
+    update = await withRateLimitRetry(async () =>
+      generate(
+        {
+          readme_url: fixture.url,
+          source,
+          draft: undefined,
+          quiz: undefined,
+          startedAt: undefined,
+          answers: {},
+          scores: {},
+          finalScore: undefined,
+          attemptId: undefined,
+        },
+        {} as never,
+      ),
+    );
+  } catch (error) {
+    // A fixture that fails generation scores as a failure. It must not
+    // end the run: the other fixtures still produce a scorecard.
+    if (!(error instanceof GenerateQuestionsError)) {
+      throw error;
+    }
+    const reason = error.message.split("\n")[0].slice(0, 200);
+    console.warn(`generation failed for ${fixture.id}: ${reason}`);
+    scores.push({
+      fixtureId: fixture.id,
+      structuralFailures: [`generation failed: ${reason}`],
+      answerability: null,
+      singleDefensible: null,
+      distractorPlausibility: null,
+      coverage: null,
+    });
+    continue;
+  }
 
   const parsed = DraftQuizSchema.safeParse(
     (update as { draft: unknown }).draft,

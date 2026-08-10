@@ -112,6 +112,30 @@ describe("generateQuestionsNode", () => {
     expect(feedback.content).toContain("schema");
   });
 
+  it("re-prompts when the parser error comes from a second langchain copy", async () => {
+    // The evals runner loads @langchain/core twice: ESM in evals, CJS
+    // through the server sources. An OutputParserException from the
+    // other copy fails instanceof, so the check must read the error by
+    // shape (lc_error_code), like isToolUseFailure does.
+    const llm = new FakeListChatModel({
+      responses: [JSON.stringify(fakeQuiz)],
+    });
+    const foreignParserError = Object.assign(
+      new Error("Failed to parse. Text: ..."),
+      { lc_error_code: "OUTPUT_PARSING_FAILURE" },
+    );
+    const llmSpy = vi
+      .spyOn(llm, "invoke")
+      .mockRejectedValueOnce(foreignParserError);
+
+    const result = await makeGenerateQuestionsNode(llm, 2)(state, {} as never);
+
+    assert.notInstanceOf(result, CommandInstance);
+    assert.isDefined(result.draft);
+    assert.equal(result.draft.title, "hello");
+    expect(llmSpy).toHaveBeenCalledTimes(2);
+  });
+
   it("raises model call errors immediately without retrying", async () => {
     const llm = new FakeListChatModel({
       responses: ['{"title":"hello"}'],

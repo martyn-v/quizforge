@@ -42,12 +42,28 @@ function isToolUseFailure(error: unknown): boolean {
   );
 }
 
+/**
+ * True when the error is a LangChain parser failure, read by shape.
+ * The evals runner loads a second ESM copy of @langchain/core next to
+ * the server CommonJS copy. An OutputParserException from the other
+ * copy fails instanceof, but the lc_error_code field survives.
+ */
+function isParserFailure(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { lc_error_code?: unknown }).lc_error_code ===
+      "OUTPUT_PARSING_FAILURE"
+  );
+}
+
 /** True when the model answered but the output does not match the schema. */
 function isSchemaFailure(error: unknown): boolean {
   return (
     error instanceof z.ZodError ||
     error instanceof OutputParserException ||
     error instanceof SyntaxError ||
+    isParserFailure(error) ||
     isToolUseFailure(error)
   );
 }
