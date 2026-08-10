@@ -3,6 +3,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { makeGenerateQuestionsNode } from "../../../server/src/agent/nodes/generate-questions.ts";
+import { GENERATION_STRATEGIES } from "../../../server/src/agent/strategies/registry.ts";
+import type { GenerationStrategy } from "../../../server/src/agent/strategies/generation-strategy.ts";
 import { GenerateQuestionsError } from "../../../server/src/common/errors.ts";
 import { buildGeneratorModel, buildJudgeModel } from "../model-factory.ts";
 import { loadManifest, loadFixtureSource } from "../fixtures.ts";
@@ -56,10 +58,22 @@ console.log(
 
 const generator = buildGeneratorModel();
 const judge = buildJudgeModel();
+// The same registry the server resolves from, so the strategy label in
+// the results JSON always names the code that ran.
+const strategy =
+  GENERATION_STRATEGIES[generatorInfo.strategy as GenerationStrategy];
+if (!strategy) {
+  throw new Error(
+    `Unknown GENERATION_STRATEGY: ${generatorInfo.strategy}. Valid strategies are ${Object.keys(
+      GENERATION_STRATEGIES,
+    ).join(", ")}`,
+  );
+}
 // TS resolves @langchain/core as ESM here and as CommonJS in server, so
 // the two BaseChatModel types do not unify. The instance is compatible.
 const generate = makeGenerateQuestionsNode(
   generator as unknown as Parameters<typeof makeGenerateQuestionsNode>[0],
+  strategy,
 );
 
 const scores: FixtureScore[] = [];
@@ -70,10 +84,15 @@ for (const fixture of fixtures) {
   console.log(`evaluating ${fixture.id} (${fixture.shape})...`);
   const source = loadFixtureSource(fixture.id);
 
+  // The wall-clock time of the successful generation attempt, repair
+  // rounds included. The timer sits inside the retry wrapper, so a
+  // rate-limit wait never counts as generation latency.
+  let generationMs: number | null = null;
   let update: unknown;
   try {
-    update = await withRateLimitRetry(async () =>
-      generate(
+    update = await withRateLimitRetry(async () => {
+      const startedAt = performance.now();
+      const result = await generate(
         {
           readme_url: fixture.url,
           source,
@@ -87,8 +106,10 @@ for (const fixture of fixtures) {
           attemptId: undefined,
         },
         {} as never,
-      ),
-    );
+      );
+      generationMs = Math.round(performance.now() - startedAt);
+      return result;
+    });
   } catch (error) {
     // A fixture that fails generation scores as a failure. It must not
     // end the run: the other fixtures still produce a scorecard.
@@ -106,6 +127,7 @@ for (const fixture of fixtures) {
       coverage: null,
       multiFraction: null,
       retries: null,
+      generationMs: null,
     });
     continue;
   }
@@ -123,6 +145,7 @@ for (const fixture of fixtures) {
       coverage: null,
       multiFraction: null,
       retries: null,
+      generationMs,
     });
     continue;
   }
@@ -135,7 +158,9 @@ for (const fixture of fixtures) {
   const coverage = await judgeCoverage(judge, source, quiz);
   const retries =
     (update as { generationRetries?: number }).generationRetries ?? null;
-  scores.push(aggregateScore(fixture.id, quiz, verdicts, coverage, retries));
+  scores.push(
+    aggregateScore(fixture.id, quiz, verdicts, coverage, retries, generationMs),
+  );
 }
 
 console.log(`\n${formatScorecard(scores)}\n`);

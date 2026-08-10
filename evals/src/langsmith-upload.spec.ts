@@ -11,10 +11,11 @@ const fullRow: FixtureScore = {
   coverage: 0.6,
   multiFraction: 0.4,
   retries: 1,
+  generationMs: 8200,
 };
 
 describe("feedbackEntries", () => {
-  it("maps a full row to seven entries", () => {
+  it("maps a full row to eight entries", () => {
     const entries = feedbackEntries(fullRow);
     expect(entries).toEqual([
       { key: "answerability", score: 1 },
@@ -23,6 +24,7 @@ describe("feedbackEntries", () => {
       { key: "coverage", score: 0.6 },
       { key: "multi_fraction", score: 0.4 },
       { key: "retries", score: 1 },
+      { key: "generation_ms", score: 8200 },
       { key: "structural", score: 1 },
     ]);
   });
@@ -37,6 +39,7 @@ describe("feedbackEntries", () => {
       coverage: null,
       multiFraction: null,
       retries: null,
+      generationMs: null,
     };
     expect(feedbackEntries(failed)).toEqual([
       {

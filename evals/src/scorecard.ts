@@ -13,6 +13,13 @@ export interface FixtureScore {
   multiFraction: number | null;
   /** Repair rounds generation needed; null when generation failed. */
   retries: number | null;
+  /**
+   * Wall-clock milliseconds of the successful generation call, repair
+   * rounds included, rate-limit waits excluded. Null when generation
+   * failed. Latency decides between strategies, so the harness measures
+   * it next to quality.
+   */
+  generationMs: number | null;
 }
 
 function fraction(hits: number, total: number): number | null {
@@ -26,6 +33,7 @@ export function aggregateScore(
   verdicts: QuestionVerdict[],
   coverage: CoverageVerdict | null,
   retries: number | null,
+  generationMs: number | null,
 ): FixtureScore {
   const singles = quiz.questions
     .map((question, index) => ({ question, verdict: verdicts[index] }))
@@ -57,7 +65,12 @@ export function aggregateScore(
       quiz.questions.length,
     ),
     retries,
+    generationMs,
   };
+}
+
+function latencyCell(ms: number | null): string {
+  return ms === null ? "n/a" : `${(ms / 1000).toFixed(1)}s`;
 }
 
 function cell(value: number | null): string {
@@ -74,6 +87,7 @@ export function formatScorecard(scores: FixtureScore[]): string {
     "coverage".padEnd(10),
     "multi".padEnd(7),
     "retries".padEnd(9),
+    "latency".padEnd(9),
     "structural",
   ].join("");
 
@@ -86,6 +100,7 @@ export function formatScorecard(scores: FixtureScore[]): string {
       cell(score.coverage).padEnd(10),
       cell(score.multiFraction).padEnd(7),
       (score.retries === null ? "n/a" : String(score.retries)).padEnd(9),
+      latencyCell(score.generationMs).padEnd(9),
       score.structuralFailures.length === 0
         ? "pass"
         : `${score.structuralFailures.length} failures`,

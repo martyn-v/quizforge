@@ -49,7 +49,7 @@ describe("aggregateScore", () => {
       coveredTopics: ["a", "b", "x"],
     };
 
-    const score = aggregateScore("left-pad", quiz, verdicts, coverage, 1);
+    const score = aggregateScore("left-pad", quiz, verdicts, coverage, 1, 8200);
 
     expect(score.answerability).toBe(0.5);
     expect(score.distractorPlausibility).toBe(0.5);
@@ -60,10 +60,11 @@ describe("aggregateScore", () => {
     // q2 of q1, q2 is multi.
     expect(score.multiFraction).toBe(0.5);
     expect(score.retries).toBe(1);
+    expect(score.generationMs).toBe(8200);
   });
 
   it("returns null scores when there are no verdicts", () => {
-    const score = aggregateScore("left-pad", quiz, [], null, 0);
+    const score = aggregateScore("left-pad", quiz, [], null, 0, null);
     expect(score.answerability).toBeNull();
     expect(score.coverage).toBeNull();
   });
@@ -77,6 +78,7 @@ describe("formatScorecard", () => {
       [verdict({})],
       { keyTopics: ["a", "b"], coveredTopics: ["a"] },
       0,
+      1000,
     );
     const table = formatScorecard([score]);
     expect(table).toContain("left-pad");
@@ -85,13 +87,20 @@ describe("formatScorecard", () => {
   });
 
   it("renders retries as a count and the mix as a percent", () => {
-    const score = aggregateScore("left-pad", quiz, [verdict({})], null, 2);
+    const score = aggregateScore("left-pad", quiz, [verdict({})], null, 2, 1000);
     const table = formatScorecard([score]);
     expect(table).toContain("retries");
     expect(table).toContain("multi");
     const row = table.split("\n")[1];
     expect(row).toContain("2");
     expect(row).toContain("50%");
+  });
+
+  it("renders the generation latency in seconds", () => {
+    const score = aggregateScore("left-pad", quiz, [verdict({})], null, 0, 8230);
+    const table = formatScorecard([score]);
+    expect(table).toContain("latency");
+    expect(table.split("\n")[1]).toContain("8.2s");
   });
 
   it("renders null retries and mix as n/a", () => {
@@ -105,6 +114,7 @@ describe("formatScorecard", () => {
         coverage: null,
         multiFraction: null,
         retries: null,
+        generationMs: null,
       },
     ]);
     expect(table.split("\n")[1]).toContain("n/a");

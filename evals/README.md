@@ -22,9 +22,11 @@ given.
 ## Configuration
 
 The generator uses the server variables: `LLM_PROVIDER`, `OLLAMA_MODEL`,
-`GROQ_MODEL`, `LLM_TEMPERATURE`, `LLM_THINK`. The eval generator mirrors
-the server seam, so the scorecard measures the model configuration that
-the application ships. The judge has its own seam, so it can run on a
+`GROQ_MODEL`, `LLM_TEMPERATURE`, `LLM_THINK`, `GENERATION_STRATEGY`. The
+eval generator mirrors the server seam, so the scorecard measures the
+model and strategy configuration that the application ships. The runner
+resolves the strategy from the same registry as the server, so the
+strategy label in the results JSON names the code that ran. The judge has its own seam, so it can run on a
 different model than the generator:
 
 - `JUDGE_PROVIDER`: `ollama` (default) or `groq`.
@@ -40,8 +42,9 @@ different model than the generator:
 
 The run has three stages per fixture:
 
-1. **Generate.** The runner imports the real `generateQuestions` node from
-   `server` and runs it on the cached fixture document.
+1. **Generate.** The runner imports the real `generateQuestions` node and
+   the real strategy registry from `server`, selects the strategy that
+   `GENERATION_STRATEGY` names, and runs it on the cached fixture document.
 2. **Check structure.** Deterministic checks validate the shape: 5 to 8
    questions, 4 options per question, one correct option for a
    single-answer question, 2 or more for a multi-answer question. The
@@ -59,10 +62,13 @@ The run has three stages per fixture:
      quiz asks about.
 
 The runner prints a scorecard table and writes a JSON file to `results/`.
-Two indicator columns sit next to the judge scores: the share of
-multi-answer questions, and the number of repair rounds that generation
-needed. A fixture that fails generation shows `n/a` in every column and
-does not end the run. The JSON files give a prompt change a score from
+Three indicator columns sit next to the judge scores: the share of
+multi-answer questions, the number of repair rounds that generation
+needed, and the generation latency in seconds. The latency clock covers
+the successful generation call with its repair rounds. It excludes
+rate-limit waits, because they measure the provider quota and not the
+strategy. A fixture that fails generation shows `n/a` in every column
+and does not end the run. The JSON files give a prompt change a score from
 before the change and after it.
 
 ## Fixtures

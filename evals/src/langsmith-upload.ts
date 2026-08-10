@@ -18,6 +18,7 @@ export function feedbackEntries(score: FixtureScore): FeedbackEntry[] {
     ["coverage", score.coverage],
     ["multi_fraction", score.multiFraction],
     ["retries", score.retries],
+    ["generation_ms", score.generationMs],
   ];
   const entries: FeedbackEntry[] = [];
   for (const [key, value] of metrics) {
