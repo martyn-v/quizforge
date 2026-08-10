@@ -14,6 +14,11 @@ pnpm eval:judge      # calibrates the judge with planted bad questions
 pnpm eval            # runs the scorecard over all fixtures
 ```
 
+`pnpm eval` takes an optional comment that describes the run:
+`pnpm eval "before the mix prompt change"`. The runner stamps the
+comment into the results JSON. The field is null when no comment is
+given.
+
 ## Configuration
 
 The generator uses the server variables: `LLM_PROVIDER`, `OLLAMA_MODEL`,
@@ -39,8 +44,10 @@ The run has three stages per fixture:
    `server` and runs it on the cached fixture document.
 2. **Check structure.** Deterministic checks validate the shape: 5 to 8
    questions, 4 options per question, one correct option for a
-   single-answer question, 2 or more for a multi-answer question. These
-   checks run before the judge and never use an LLM.
+   single-answer question, 2 or more for a multi-answer question. The
+   quiz must contain both question types. A question must not reveal how
+   many options are correct, for example with "select 2" in the question
+   text. These checks run before the judge and never use an LLM.
 3. **Judge.** An LLM scores each question against the source document on
    three criteria, and the whole quiz on one:
    - **Answerability**: the source alone must answer the question.
@@ -52,8 +59,11 @@ The run has three stages per fixture:
      quiz asks about.
 
 The runner prints a scorecard table and writes a JSON file to `results/`.
-The JSON files give a prompt change a score from before the change and
-after it.
+Two indicator columns sit next to the judge scores: the share of
+multi-answer questions, and the number of repair rounds that generation
+needed. A fixture that fails generation shows `n/a` in every column and
+does not end the run. The JSON files give a prompt change a score from
+before the change and after it.
 
 ## Fixtures
 
@@ -81,7 +91,18 @@ blame is on the judge, not the generator.
 
 ## Current status
 
-The server `QuizSchema` does not have questions yet. Until that work
-lands, `pnpm eval` reports one structural failure per fixture and shows
-`n/a` for the judged columns. The schema in `src/quiz-shape.ts` is the
-structural contract that the future server schema must satisfy.
+The harness runs end to end against the real generation node. The runs
+from 2026-08-10 (Groq `llama-3.3-70b-versatile` generator, `gemma4:31b`
+judge) show three open generation defects:
+
+- The left-pad fixture produces a quiz with no multi-answer question.
+  The mix check flags it.
+- The langgraphjs fixture fails generation: a multi-answer question has
+  4 correct options, and the repair round does not fix it.
+- The gemma4 generator reveals the answer count in question text, for
+  example "select 2". The count-leak check flags it.
+
+The next step is a generation prompt change that addresses these
+defects, with the current scorecards as the before half of the
+evidence pair. The pipecat fixture is blocked by the Groq free-tier
+rate limit, not by a generation defect.

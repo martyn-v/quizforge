@@ -15,6 +15,10 @@ import {
   type FixtureScore,
 } from "../scorecard.ts";
 
+// An optional free-text description of the run, stamped into the
+// results JSON: pnpm eval "before the mix prompt change".
+const comment = process.argv[2] ?? null;
+
 const generator = buildGeneratorModel();
 const judge = buildJudgeModel();
 // TS resolves @langchain/core as ESM here and as CommonJS in server, so
@@ -144,7 +148,13 @@ const resultPath = join(resultsDir, `${stamp}.json`);
 writeFileSync(
   resultPath,
   JSON.stringify(
-    { timestamp: stamp, generator: generatorInfo, judge: judgeInfo, scores },
+    {
+      timestamp: stamp,
+      comment,
+      generator: generatorInfo,
+      judge: judgeInfo,
+      scores,
+    },
     null,
     2,
   ),

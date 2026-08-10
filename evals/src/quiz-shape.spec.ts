@@ -99,6 +99,32 @@ describe("structuralFailures", () => {
     );
   });
 
+  it.each([
+    "What are key features? Select 2.",
+    "Choose two benefits of left-pad.",
+    "Pick 3 of the following statements.",
+    "Which two options describe left-pad? (select 2-3)",
+    "Mark the three correct statements.",
+  ])("flags a question that reveals the answer count: %s", (text) => {
+    const quiz = makeQuiz(5);
+    quiz.questions[1] = makeQuestion({ text });
+    expect(structuralFailures(quiz)).toContain(
+      "question 2 reveals the number of correct answers",
+    );
+  });
+
+  it.each([
+    "Select all that apply: which options describe left-pad?",
+    "What does the 2xx range mean for a status code?",
+    "Which option describes left-pad?",
+  ])("does not flag a question without a count giveaway: %s", (text) => {
+    const quiz = makeQuiz(5);
+    quiz.questions[1] = makeQuestion({ text });
+    expect(structuralFailures(quiz)).not.toContain(
+      "question 2 reveals the number of correct answers",
+    );
+  });
+
   it("flags a multi-answer question with fewer than 2 correct options", () => {
     const bad = makeQuestion({ type: "multi" });
     const quiz = makeQuiz(5);

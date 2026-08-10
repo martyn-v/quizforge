@@ -19,6 +19,14 @@ const MIN_QUESTIONS = 5;
 const MAX_QUESTIONS = 8;
 const OPTIONS_PER_QUESTION = 4;
 
+// A question must not reveal how many options are correct. The pattern
+// matches the observed leak phrasings: a verb followed by a count
+// ("select 2", "choose two", "which three"), or a bare count range
+// ("2-3", "2 or 3"). "Select all that apply" does not match, because
+// it does not reveal the count.
+const COUNT_LEAK =
+  /\b(?:select|choose|pick|mark|which)\s+(?:any\s+)?(?:the\s+)?(?:two|three|2|3)\b|\b[23]\s*(?:-|or)\s*[23]\b/i;
+
 /** Returns one message per structural rule the quiz breaks. */
 export function structuralFailures(quiz: DraftQuiz): string[] {
   const failures: string[] = [];
@@ -44,6 +52,9 @@ export function structuralFailures(quiz: DraftQuiz): string[] {
       failures.push(
         `${label} has ${question.options.length} options, expected 4`,
       );
+    }
+    if (COUNT_LEAK.test(question.text)) {
+      failures.push(`${label} reveals the number of correct answers`);
     }
     const correct = question.options.filter((o) => o.isCorrect).length;
     if (question.type === "single" && correct !== 1) {
