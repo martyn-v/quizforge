@@ -234,11 +234,14 @@ Eval runs trace to a separate project with the `-evals` suffix. This keeps
 eval batches out of the trace stream of the live sessions. Unit tests
 force tracing off and never send runs.
 
+Each eval batch also uploads one LangSmith experiment. The dataset
+`<project>-evals` holds one example per fixture. Each fixture becomes
+one run, and the judge scores attach as feedback. The upload uses the
+same `LANGSMITH_*` variables. A failed upload logs a warning and does
+not fail the eval run.
+
 ## Roadmap
 
-- **Eval results as LangSmith experiment runs.** The scorecard stays in a
-  local JSON file today. An upload step after the eval loop can log each
-  fixture as a run with the judge scores as feedback.
 - **Error events over SSE.** Nodes throw typed errors (`FetchSourceError`,
   `GenerateQuestionsError`). Failure ends the run, so no error value is
   written into the graph state. `AgentService` catches the error and maps
