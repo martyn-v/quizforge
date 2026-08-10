@@ -74,10 +74,10 @@ Tests and evals:
 
 Tier 1, progress streaming (do this one first):
 
-- [ ] Bridge the graph's stream into an SSE response: LangGraph async iterator to RxJS observable, NestJS `@Sse()` / manual SSE write on the POST endpoints
-- [ ] Emit node-level progress events during session start: fetching source, generating questions, validating
-- [ ] Boundary rule: stream progress only, never partial question JSON (half-parsed structured output is brittle, and raw generation contains the correct flags)
-- [ ] Vue side: parse the SSE stream via `fetch` + `ReadableStream` (native `EventSource` is GET-only, endpoints are POSTs)
+- [x] Bridge the graph's stream into an SSE response: LangGraph async iterator to RxJS observable, NestJS `@Sse()` / manual SSE write on the POST endpoints
+- [x] Emit node-level progress events during session start: fetching source, generating questions, validating
+- [x] Boundary rule: stream progress only, never partial question JSON (half-parsed structured output is brittle, and raw generation contains the correct flags)
+- [x] Vue side: parse the SSE stream via `fetch` + `ReadableStream` (native `EventSource` is GET-only, endpoints are POSTs)
 
 Tier 2, conversational framing (stretch, first thing cut):
 
