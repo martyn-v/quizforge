@@ -102,36 +102,36 @@ for (const fixture of loadManifest()) {
 }
 
 // "provider default" means the variable is unset and the model uses its
-// own default. The judge defaults are set in buildJudgeModel.
+// own default. The judge defaults are set in buildJudgeModel. The model
+// field holds the model of the active provider.
+const generatorProvider = process.env.LLM_PROVIDER ?? "ollama";
 const generatorInfo = {
-  provider: process.env.LLM_PROVIDER ?? "ollama",
+  provider: generatorProvider,
   strategy: process.env.GENERATION_STRATEGY ?? "single-pass",
-  ollamaModel: process.env.OLLAMA_MODEL ?? "gemma4:31b",
-  groqModel: process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile",
+  model:
+    generatorProvider === "groq"
+      ? (process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile")
+      : (process.env.OLLAMA_MODEL ?? "gemma4:31b"),
   temperature: process.env.LLM_TEMPERATURE || "provider default",
   think: process.env.LLM_THINK || "provider default",
 };
+const judgeProvider = process.env.JUDGE_PROVIDER ?? "ollama";
 const judgeInfo = {
-  provider: process.env.JUDGE_PROVIDER ?? "ollama",
-  ollamaModel: process.env.JUDGE_OLLAMA_MODEL ?? null,
-  groqModel: process.env.JUDGE_GROQ_MODEL ?? null,
+  provider: judgeProvider,
+  model:
+    judgeProvider === "groq"
+      ? (process.env.JUDGE_GROQ_MODEL ?? null)
+      : (process.env.JUDGE_OLLAMA_MODEL ?? null),
   temperature: process.env.JUDGE_TEMPERATURE || "0",
   think: process.env.JUDGE_THINK || "false",
 };
 
-const generatorModel =
-  generatorInfo.provider === "groq"
-    ? generatorInfo.groqModel
-    : generatorInfo.ollamaModel;
-const judgeModel =
-  judgeInfo.provider === "groq" ? judgeInfo.groqModel : judgeInfo.ollamaModel;
-
 console.log(
-  `\ngenerator: ${generatorInfo.provider}/${generatorModel} ` +
+  `\ngenerator: ${generatorInfo.provider}/${generatorInfo.model} ` +
     `(${generatorInfo.strategy}, temperature=${generatorInfo.temperature}, think=${generatorInfo.think})`,
 );
 console.log(
-  `judge: ${judgeInfo.provider}/${judgeModel} ` +
+  `judge: ${judgeInfo.provider}/${judgeInfo.model} ` +
     `(temperature=${judgeInfo.temperature}, think=${judgeInfo.think})`,
 );
 console.log(`\n${formatScorecard(scores)}\n`);
