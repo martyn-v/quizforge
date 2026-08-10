@@ -86,6 +86,37 @@ describe("AgentService against the real graph", () => {
     expect(JSON.stringify(response)).not.toContain("isCorrect");
   });
 
+  it("streams progress and the first question, and the session continues", async () => {
+    // ARRANGE:
+    stubFetch("# Title");
+    const service = makeService();
+
+    // ACT: drain the start stream against the real graph.
+    const events = [];
+    for await (const event of service.startSessionStream(BLOB_URL)) {
+      events.push(event);
+    }
+
+    // ASSERT: stages in order, the question last, no leaked flags.
+    expect(events).toMatchObject([
+      { kind: "progress", stage: "fetching source" },
+      { kind: "progress", stage: "generating questions" },
+      { kind: "progress", stage: "saving quiz" },
+      { kind: "question", question: { index: 0, question: { id: qid(0) } } },
+    ]);
+    expect(JSON.stringify(events)).not.toContain("isCorrect");
+
+    // The streamed session is a normal session: it reads back and resumes.
+    const started = events.at(-1) as { sessionId: string };
+    expect(await service.getSession(started.sessionId)).toMatchObject({
+      kind: "question",
+      question: { question: { id: qid(0) } },
+    });
+    expect(
+      await service.submitAnswer(started.sessionId, selections[0]),
+    ).toMatchObject({ kind: "question", question: { index: 1 } });
+  });
+
   it("throws SessionNotFoundError for an unknown session on read and on submit", async () => {
     const service = makeService();
     const unknown = crypto.randomUUID();

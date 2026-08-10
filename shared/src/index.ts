@@ -1,5 +1,4 @@
-// Shared domain types for quizforge. The SSE event union lands here
-// with Phase 3.5 (see docs/PLAN.md).
+// Shared domain types for quizforge.
 
 export const SHARED_PACKAGE = "@quizforge/shared";
 
@@ -33,6 +32,13 @@ export {
   QuizResultSchema,
   SubmitAnswerResponseSchema,
 } from "./quiz";
+export {
+  ProgressStageSchema,
+  StreamEventSchema,
+  encodeSseEvent,
+  SseEventDecoder,
+} from "./events";
+export type { ProgressStage, StreamEvent } from "./events";
 export type {
   QuestionType,
   DraftOption,

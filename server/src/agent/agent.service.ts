@@ -27,6 +27,7 @@ import {
   AskQuestionPayloadSchema,
   QuizResultSchema,
   StartSessionResponse,
+  StreamEvent,
   SubmitAnswerResponse,
 } from "@quizforge/shared";
 import { LLM_MODEL_NAME } from "./providers/llm-model-name.provider";
@@ -87,6 +88,58 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     const interrupt = result[INTERRUPT][0].value;
 
     return { sessionId, question: AskQuestionPayloadSchema.parse(interrupt) };
+  }
+
+  /**
+   * The streaming variant of startSession (docs/PLAN.md Phase 3.5).
+   * Yields a progress event as each stage starts and ends with the
+   * first question. The update payloads never cross this boundary:
+   * only the node names steer the events, so isCorrect stays inside
+   * (AGENTS.md rule 2). The question passes the same schema parse as
+   * the JSON path.
+   */
+  async *startSessionStream(url: string): AsyncGenerator<StreamEvent> {
+    const sessionId = crypto.randomUUID();
+
+    yield { kind: "progress", stage: "fetching source" };
+
+    const stream: AsyncIterable<Record<string, unknown>> =
+      await this.graph.stream(
+        { readme_url: url },
+        {
+          configurable: { thread_id: sessionId },
+          metadata: {
+            strategy: this.generationStrategy,
+            model: this.llmModelName,
+          },
+          streamMode: "updates",
+        },
+      );
+
+    let interrupt: unknown;
+    for await (const update of stream) {
+      if ("fetchSource" in update) {
+        yield { kind: "progress", stage: "generating questions" };
+      }
+      if ("generateQuestions" in update) {
+        yield { kind: "progress", stage: "saving quiz" };
+      }
+      if (INTERRUPT in update) {
+        interrupt = (update[INTERRUPT] as { value: unknown }[])[0].value;
+      }
+    }
+
+    if (interrupt === undefined) {
+      throw new InvalidStateError(
+        "Expected the graph to be interrupted after starting a session",
+      );
+    }
+
+    yield {
+      kind: "question",
+      sessionId,
+      question: AskQuestionPayloadSchema.parse(interrupt),
+    };
   }
 
   async submitAnswer(

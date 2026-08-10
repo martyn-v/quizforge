@@ -3,7 +3,7 @@ import type { AskQuestionPayload } from "@quizforge/shared";
 import { InvalidStateError, SessionNotFoundError } from "../common/errors";
 import { AgentService } from "./agent.service";
 import { buildQuizGraph } from "./graph";
-import { makeQuiz, oid, qid } from "./quiz-fixtures";
+import { makeDraft, makeQuiz, oid, qid } from "./quiz-fixtures";
 
 // The service compiles the graph in onModuleInit. The spec replaces the
 // whole graph with one invoke mock, so no node, model or database runs.
@@ -58,8 +58,9 @@ function unknownSnapshot() {
 
 function makeService() {
   const invoke = vi.fn();
+  const stream = vi.fn();
   const getState = vi.fn().mockResolvedValue(pausedSnapshot(firstQuestion));
-  buildQuizGraphMock.mockReturnValue({ invoke, getState } as never);
+  buildQuizGraphMock.mockReturnValue({ invoke, stream, getState } as never);
   const prisma = { $disconnect: vi.fn() };
   const service = new AgentService(
     checkpointer,
@@ -70,7 +71,22 @@ function makeService() {
     scoringService,
   );
   service.onModuleInit();
-  return { service, invoke, getState, prisma };
+  return { service, invoke, stream, getState, prisma };
+}
+
+/** The update chunks graph.stream emits in "updates" mode. */
+function streamOf(...updates: Record<string, unknown>[]) {
+  return (async function* () {
+    await Promise.resolve(); // The real stream never yields synchronously.
+    yield* updates;
+  })();
+}
+
+/** Drains an async generator into an array. */
+async function collect<T>(events: AsyncGenerator<T>): Promise<T[]> {
+  const out: T[] = [];
+  for await (const event of events) out.push(event);
+  return out;
 }
 
 beforeEach(() => {
@@ -155,6 +171,92 @@ describe("AgentService", () => {
       // class is what the exception filter switches on.
       const promise = service.startSession(
         "https://github.com/o/r/blob/main/README.md",
+      );
+
+      // ASSERT:
+      await expect(promise).rejects.toBeInstanceOf(InvalidStateError);
+      await expect(promise).rejects.toThrow(
+        "Expected the graph to be interrupted after starting a session",
+      );
+    });
+  });
+
+  describe("startSessionStream", () => {
+    it("yields a progress event per stage and ends with the first question", async () => {
+      // ARRANGE: the node updates carry real state, isCorrect included.
+      // Only the node names may steer the events (AGENTS.md rule 2).
+      const { service, stream } = makeService();
+      stream.mockReturnValue(
+        streamOf(
+          { fetchSource: { source: "# Title" } },
+          { generateQuestions: { draft: makeDraft() } },
+          { persistQuiz: { quiz: makeQuiz(crypto.randomUUID()) } },
+          { [INTERRUPT]: [{ value: firstQuestion }] },
+        ),
+      );
+
+      // ACT:
+      const events = await collect(
+        service.startSessionStream("https://github.com/o/r/blob/main/README.md"),
+      );
+
+      // ASSERT: stages in order, then the question with the session id.
+      expect(events).toEqual([
+        { kind: "progress", stage: "fetching source" },
+        { kind: "progress", stage: "generating questions" },
+        { kind: "progress", stage: "saving quiz" },
+        {
+          kind: "question",
+          sessionId: expect.any(String) as string,
+          question: firstQuestion,
+        },
+      ]);
+      expect(JSON.stringify(events)).not.toContain("isCorrect");
+
+      const sessionId = events.at(-1) as { sessionId: string };
+      expect(stream).toHaveBeenCalledExactlyOnceWith(
+        { readme_url: "https://github.com/o/r/blob/main/README.md" },
+        {
+          configurable: { thread_id: sessionId.sessionId },
+          metadata: { strategy: generationStrategy, model: "modelName" },
+          streamMode: "updates",
+        },
+      );
+    });
+
+    it("strips isCorrect even when the interrupt payload carries it", async () => {
+      // ARRANGE: same boundary rule as startSession (AGENTS.md rule 2).
+      const { service, stream } = makeService();
+      const leaked = {
+        ...firstQuestion,
+        question: {
+          ...firstQuestion.question,
+          options: firstQuestion.question.options.map((o) => ({
+            ...o,
+            isCorrect: true,
+          })),
+        },
+      };
+      stream.mockReturnValue(streamOf({ [INTERRUPT]: [{ value: leaked }] }));
+
+      // ACT:
+      const events = await collect(
+        service.startSessionStream("https://github.com/o/r/blob/main/README.md"),
+      );
+
+      // ASSERT:
+      expect(JSON.stringify(events)).not.toContain("isCorrect");
+      expect(events.at(-1)).toMatchObject({ question: firstQuestion });
+    });
+
+    it("rejects when the stream ends without an interrupt", async () => {
+      // ARRANGE: a run to completion means the graph never asked.
+      const { service, stream } = makeService();
+      stream.mockReturnValue(streamOf({ fetchSource: { source: "# Title" } }));
+
+      // ACT:
+      const promise = collect(
+        service.startSessionStream("https://github.com/o/r/blob/main/README.md"),
       );
 
       // ASSERT:
