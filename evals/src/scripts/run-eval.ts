@@ -9,6 +9,7 @@ import { loadManifest, loadFixtureSource } from "../fixtures.ts";
 import { DraftQuizSchema } from "../quiz-shape.ts";
 import { judgeQuestion, judgeCoverage } from "../judge/judge.ts";
 import { withRateLimitRetry } from "../rate-limit.ts";
+import { uploadScorecard } from "../langsmith-upload.ts";
 import {
   aggregateScore,
   formatScorecard,
@@ -63,7 +64,9 @@ const generate = makeGenerateQuestionsNode(
 
 const scores: FixtureScore[] = [];
 
-for (const fixture of loadManifest()) {
+const fixtures = loadManifest();
+
+for (const fixture of fixtures) {
   console.log(`evaluating ${fixture.id} (${fixture.shape})...`);
   const source = loadFixtureSource(fixture.id);
 
@@ -161,3 +164,12 @@ writeFileSync(
   ),
 );
 console.log(`results written to ${resultPath}`);
+
+await uploadScorecard({
+  fixtures,
+  scores,
+  generator: generatorInfo,
+  judge: judgeInfo,
+  comment,
+  stamp,
+});

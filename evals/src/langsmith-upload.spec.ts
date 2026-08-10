@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { feedbackEntries } from "./langsmith-upload.ts";
+import { feedbackEntries, uploadScorecard } from "./langsmith-upload.ts";
 import type { FixtureScore } from "./scorecard.ts";
 
 const fullRow: FixtureScore = {
@@ -62,5 +62,22 @@ describe("feedbackEntries", () => {
   it("keeps a zero retries entry", () => {
     const entries = feedbackEntries({ ...fullRow, retries: 0 });
     expect(entries).toContainEqual({ key: "retries", score: 0 });
+  });
+});
+
+describe("uploadScorecard", () => {
+  it("resolves without network when tracing is off", async () => {
+    // vitest.setup.ts forces LANGSMITH_TRACING=false. The gate must
+    // return before any client is built, so this resolves offline.
+    await expect(
+      uploadScorecard({
+        fixtures: [],
+        scores: [],
+        generator: {},
+        judge: {},
+        comment: null,
+        stamp: "2026-08-10T00-00-00.000Z",
+      }),
+    ).resolves.toBeUndefined();
   });
 });

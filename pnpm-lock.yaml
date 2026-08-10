@@ -41,6 +41,9 @@ importers:
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
+      langsmith:
+        specifier: 0.8.9
+        version: 0.8.9
       zod:
         specifier: 4.4.3
         version: 4.4.3
