@@ -19,8 +19,8 @@ Rules:
 - Each question must have at least one correct option.
 - Each question must be either a single-choice or multiple-choice question.
 - Multi-choice questions must have 2 or 3 correct options.
+- Multi-choice questions must not leak the number of correct options in the question text.
 - The questions and options must be in English.
-- The questions and options must be in the same language as the source material.
 `;
 
 /**
