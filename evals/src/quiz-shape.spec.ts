@@ -15,10 +15,25 @@ function makeQuestion(overrides: Partial<DraftQuestion> = {}): DraftQuestion {
   };
 }
 
+function makeMultiQuestion(): DraftQuestion {
+  return makeQuestion({
+    type: "multi",
+    options: [
+      { text: "Pads a string on the left", isCorrect: true },
+      { text: "Accepts a pad length", isCorrect: true },
+      { text: "Trims a string", isCorrect: false },
+      { text: "Reverses a string", isCorrect: false },
+    ],
+  });
+}
+
+// The last question is multi, so the quiz has a mix of both types.
 function makeQuiz(questionCount = 5): DraftQuiz {
   return {
     title: "left-pad quiz",
-    questions: Array.from({ length: questionCount }, () => makeQuestion()),
+    questions: Array.from({ length: questionCount }, (_, index) =>
+      index === questionCount - 1 ? makeMultiQuestion() : makeQuestion(),
+    ),
   };
 }
 
@@ -65,6 +80,22 @@ describe("structuralFailures", () => {
     quiz.questions[0] = bad;
     expect(structuralFailures(quiz)).toContain(
       "question 1 is single-answer with 2 correct options, expected 1",
+    );
+  });
+
+  it("flags a quiz with no multi-answer question", () => {
+    const quiz = makeQuiz(5);
+    quiz.questions = quiz.questions.map(() => makeQuestion());
+    expect(structuralFailures(quiz)).toContain(
+      "quiz has no multi-answer question",
+    );
+  });
+
+  it("flags a quiz with no single-answer question", () => {
+    const quiz = makeQuiz(5);
+    quiz.questions = quiz.questions.map(() => makeMultiQuestion());
+    expect(structuralFailures(quiz)).toContain(
+      "quiz has no single-answer question",
     );
   });
 

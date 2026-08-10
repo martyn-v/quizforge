@@ -16,6 +16,10 @@ const QuizState = new StateSchema({
   draft: DraftQuizSchema.optional().describe(
     "The quiz that generateQuestions generated, before ids exist",
   ),
+  generationRetries: z
+    .number()
+    .optional()
+    .describe("The repair rounds generation needed, from generateQuestions"),
   quiz: QuizSchema.optional().describe(
     "The persisted quiz with database ids, from persistQuiz",
   ),

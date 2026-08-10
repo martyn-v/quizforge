@@ -9,6 +9,7 @@ const state: typeof QuizState.State = {
   readme_url: "https://raw.githubusercontent.com/owner/repo/main/README.md",
   source: "This is a test.",
   draft: makeDraft(),
+  generationRetries: undefined,
   quiz: undefined,
   startedAt: undefined,
   answers: {},

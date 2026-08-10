@@ -197,11 +197,14 @@ gives each generated quiz a score on two axes, and it also checks hygiene:
   be absurd
 
 An LLM is the judge. The judge does not check structural validity.
-Deterministic checks control the number of options, the number of questions
-and the number of correct options. These checks run before the judge. The
-command writes each scorecard to a local JSON file. A prompt change
-therefore has a score from before the change and after it. The judge gives a
-score to the generator. It never gives a score to the user.
+Deterministic checks control the number of options, the number of questions,
+the number of correct options and the question mix. A quiz must contain both
+question types, so both scoring paths get exercise. These checks run before
+the judge. The scorecard also reports two indicators per fixture: the share
+of multi-answer questions, and the number of repair rounds that generation
+needed. The command writes each scorecard to a local JSON file. A prompt
+change therefore has a score from before the change and after it. The judge
+gives a score to the generator. It never gives a score to the user.
 
 ## Quickstart
 

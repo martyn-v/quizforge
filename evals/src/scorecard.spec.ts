@@ -49,7 +49,7 @@ describe("aggregateScore", () => {
       coveredTopics: ["a", "b", "x"],
     };
 
-    const score = aggregateScore("left-pad", quiz, verdicts, coverage);
+    const score = aggregateScore("left-pad", quiz, verdicts, coverage, 1);
 
     expect(score.answerability).toBe(0.5);
     expect(score.distractorPlausibility).toBe(0.5);
@@ -57,10 +57,13 @@ describe("aggregateScore", () => {
     expect(score.singleDefensible).toBe(1);
     // "x" is not a key topic, so it does not count.
     expect(score.coverage).toBe(0.5);
+    // q2 of q1, q2 is multi.
+    expect(score.multiFraction).toBe(0.5);
+    expect(score.retries).toBe(1);
   });
 
   it("returns null scores when there are no verdicts", () => {
-    const score = aggregateScore("left-pad", quiz, [], null);
+    const score = aggregateScore("left-pad", quiz, [], null, 0);
     expect(score.answerability).toBeNull();
     expect(score.coverage).toBeNull();
   });
@@ -68,13 +71,42 @@ describe("aggregateScore", () => {
 
 describe("formatScorecard", () => {
   it("renders one row per fixture with percentages", () => {
-    const score = aggregateScore("left-pad", quiz, [verdict({})], {
-      keyTopics: ["a", "b"],
-      coveredTopics: ["a"],
-    });
+    const score = aggregateScore(
+      "left-pad",
+      quiz,
+      [verdict({})],
+      { keyTopics: ["a", "b"], coveredTopics: ["a"] },
+      0,
+    );
     const table = formatScorecard([score]);
     expect(table).toContain("left-pad");
     expect(table).toContain("100%");
     expect(table).toContain("50%");
+  });
+
+  it("renders retries as a count and the mix as a percent", () => {
+    const score = aggregateScore("left-pad", quiz, [verdict({})], null, 2);
+    const table = formatScorecard([score]);
+    expect(table).toContain("retries");
+    expect(table).toContain("multi");
+    const row = table.split("\n")[1];
+    expect(row).toContain("2");
+    expect(row).toContain("50%");
+  });
+
+  it("renders null retries and mix as n/a", () => {
+    const table = formatScorecard([
+      {
+        fixtureId: "broken",
+        structuralFailures: ["generation failed: boom"],
+        answerability: null,
+        singleDefensible: null,
+        distractorPlausibility: null,
+        coverage: null,
+        multiFraction: null,
+        retries: null,
+      },
+    ]);
+    expect(table.split("\n")[1]).toContain("n/a");
   });
 });

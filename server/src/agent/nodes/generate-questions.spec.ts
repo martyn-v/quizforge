@@ -10,6 +10,7 @@ const state: typeof QuizState.State = {
   readme_url: "https://raw.githubusercontent.com/owner/repo/main/README.md",
   source: "This is a test.",
   draft: undefined,
+  generationRetries: undefined,
   quiz: undefined,
   startedAt: undefined,
   answers: {},
@@ -33,6 +34,7 @@ describe("generateQuestionsNode", () => {
     assert.isDefined(result.draft);
     assert.equal(result.draft.title, fakeQuiz.title);
     assert.equal(result.draft.description, fakeQuiz.description);
+    assert.equal(result.generationRetries, 0);
 
     expect(llmSpy).toHaveBeenCalledOnce();
 
@@ -66,6 +68,7 @@ describe("generateQuestionsNode", () => {
     assert.notInstanceOf(result, CommandInstance);
     assert.isDefined(result.draft);
     assert.equal(result.draft.title, "hello");
+    assert.equal(result.generationRetries, 1);
     expect(llmSpy).toHaveBeenCalledTimes(2);
 
     const [retryInput] = llmSpy.mock.calls[1];

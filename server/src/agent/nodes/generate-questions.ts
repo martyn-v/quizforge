@@ -90,7 +90,10 @@ export function makeGenerateQuestionsNode(
     for (let attempt = 1; ; attempt++) {
       try {
         const result = await model.invoke(messages);
-        return { draft: GeneratedQuizSchema.parse(result) };
+        return {
+          draft: GeneratedQuizSchema.parse(result),
+          generationRetries: attempt - 1,
+        };
       } catch (error) {
         if (!isSchemaFailure(error)) {
           throw new GenerateQuestionsError(

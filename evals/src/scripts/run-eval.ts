@@ -37,6 +37,7 @@ for (const fixture of loadManifest()) {
           readme_url: fixture.url,
           source,
           draft: undefined,
+          generationRetries: undefined,
           quiz: undefined,
           startedAt: undefined,
           answers: {},
@@ -62,6 +63,8 @@ for (const fixture of loadManifest()) {
       singleDefensible: null,
       distractorPlausibility: null,
       coverage: null,
+      multiFraction: null,
+      retries: null,
     });
     continue;
   }
@@ -77,6 +80,8 @@ for (const fixture of loadManifest()) {
       singleDefensible: null,
       distractorPlausibility: null,
       coverage: null,
+      multiFraction: null,
+      retries: null,
     });
     continue;
   }
@@ -87,7 +92,9 @@ for (const fixture of loadManifest()) {
     verdicts.push(await judgeQuestion(judge, source, question));
   }
   const coverage = await judgeCoverage(judge, source, quiz);
-  scores.push(aggregateScore(fixture.id, quiz, verdicts, coverage));
+  const retries =
+    (update as { generationRetries?: number }).generationRetries ?? null;
+  scores.push(aggregateScore(fixture.id, quiz, verdicts, coverage, retries));
 }
 
 // "provider default" means the variable is unset and the model uses its

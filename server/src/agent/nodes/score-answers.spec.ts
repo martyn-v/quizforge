@@ -25,6 +25,7 @@ const state: typeof QuizState.State = {
   readme_url: "https://raw.githubusercontent.com/owner/repo/main/README.md",
   source: "This is a test.",
   draft: undefined,
+  generationRetries: undefined,
   quiz: makeQuiz(QUIZ_ID),
   startedAt: undefined,
   answers: correctAnswers,

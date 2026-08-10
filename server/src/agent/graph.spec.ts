@@ -123,6 +123,7 @@ describe("the quiz graph", () => {
       readme_url: RAW_URL,
       source: "# Title",
       draft: fakeDraft,
+      generationRetries: 0,
       quiz: makeQuiz(quizId),
       startedAt: expect.any(String) as unknown,
       answers: {

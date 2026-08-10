@@ -28,6 +28,16 @@ export function structuralFailures(quiz: DraftQuiz): string[] {
     failures.push(`quiz has ${count} questions, expected 5 to 8`);
   }
 
+  // Both question types must appear, so both scoring paths get
+  // exercise (see the README design note on the generator).
+  const types = new Set(quiz.questions.map((q) => q.type));
+  if (!types.has("multi")) {
+    failures.push("quiz has no multi-answer question");
+  }
+  if (!types.has("single")) {
+    failures.push("quiz has no single-answer question");
+  }
+
   quiz.questions.forEach((question, index) => {
     const label = `question ${index + 1}`;
     if (question.options.length !== OPTIONS_PER_QUESTION) {

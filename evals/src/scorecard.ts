@@ -9,6 +9,10 @@ export interface FixtureScore {
   singleDefensible: number | null;
   distractorPlausibility: number | null;
   coverage: number | null;
+  /** The share of multi-answer questions; null when no quiz exists. */
+  multiFraction: number | null;
+  /** Repair rounds generation needed; null when generation failed. */
+  retries: number | null;
 }
 
 function fraction(hits: number, total: number): number | null {
@@ -21,6 +25,7 @@ export function aggregateScore(
   quiz: DraftQuiz,
   verdicts: QuestionVerdict[],
   coverage: CoverageVerdict | null,
+  retries: number | null,
 ): FixtureScore {
   const singles = quiz.questions
     .map((question, index) => ({ question, verdict: verdicts[index] }))
@@ -47,6 +52,11 @@ export function aggregateScore(
       verdicts.length,
     ),
     coverage: coverage ? fraction(covered.length, key.size) : null,
+    multiFraction: fraction(
+      quiz.questions.filter((q) => q.type === "multi").length,
+      quiz.questions.length,
+    ),
+    retries,
   };
 }
 
@@ -62,6 +72,8 @@ export function formatScorecard(scores: FixtureScore[]): string {
     "1-defensible".padEnd(14),
     "distractors".padEnd(13),
     "coverage".padEnd(10),
+    "multi".padEnd(7),
+    "retries".padEnd(9),
     "structural",
   ].join("");
 
@@ -72,6 +84,8 @@ export function formatScorecard(scores: FixtureScore[]): string {
       cell(score.singleDefensible).padEnd(14),
       cell(score.distractorPlausibility).padEnd(13),
       cell(score.coverage).padEnd(10),
+      cell(score.multiFraction).padEnd(7),
+      (score.retries === null ? "n/a" : String(score.retries)).padEnd(9),
       score.structuralFailures.length === 0
         ? "pass"
         : `${score.structuralFailures.length} failures`,
