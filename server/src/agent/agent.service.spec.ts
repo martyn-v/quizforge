@@ -13,7 +13,9 @@ const buildQuizGraphMock = vi.mocked(buildQuizGraph);
 
 const checkpointer = {} as never;
 const llm = {} as never;
-const generationStrategy = {} as never;
+// The service reads only the name and passes the object through, so a
+// two-field stub stands in for a real strategy.
+const generationStrategy = { name: "strategy-name", generate: vi.fn() };
 const scoringService = {} as never;
 
 /** A valid first-question payload, as the askQuestion interrupt carries it. */
@@ -65,7 +67,7 @@ function makeService() {
   const service = new AgentService(
     checkpointer,
     llm,
-    generationStrategy,
+    generationStrategy as never,
     "modelName",
     prisma as never,
     scoringService,
@@ -102,7 +104,8 @@ describe("AgentService", () => {
       checkpointer,
       prisma,
       scoringService,
-      { model: "modelName", strategy: generationStrategy },
+      { model: "modelName", strategy: "strategy-name" },
+      generationStrategy,
     );
   });
 
@@ -131,7 +134,7 @@ describe("AgentService", () => {
         { readme_url: "https://github.com/o/r/blob/main/README.md" },
         {
           configurable: { thread_id: result.sessionId },
-          metadata: { strategy: generationStrategy, model: "modelName" },
+          metadata: { strategy: "strategy-name", model: "modelName" },
         },
       );
     });
@@ -218,7 +221,7 @@ describe("AgentService", () => {
         { readme_url: "https://github.com/o/r/blob/main/README.md" },
         {
           configurable: { thread_id: sessionId.sessionId },
-          metadata: { strategy: generationStrategy, model: "modelName" },
+          metadata: { strategy: "strategy-name", model: "modelName" },
           streamMode: "updates",
         },
       );

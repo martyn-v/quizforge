@@ -67,7 +67,7 @@ Tests and evals:
 - [ ] Compare the two strategies on the same fixtures with the same judge, so "different strategies" comes with evidence, not vibes
 - [x] LangSmith tracing on the generation call
 - [x] Log eval results to LangSmith as experiment runs
-- [ ] Second generation strategy behind the strategy interface (e.g. single-pass vs chunked)
+- [x] Second generation strategy behind the strategy interface (e.g. single-pass vs chunked)
 - [x] Repo README: data-flow explanation, quickstart, deliberate "known limitations" section
 
 ## Phase 3.5: Streaming (1.5 to 2 hours)

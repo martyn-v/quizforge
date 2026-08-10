@@ -16,10 +16,8 @@ import { InvalidStateError, SessionNotFoundError } from "../common/errors";
 import { buildQuizGraph, type QuizGraph } from "./graph";
 import { CHECKPOINTER } from "./providers/checkpointer.provider";
 import { LLM_PROVIDER } from "./providers/llm.provider";
-import {
-  GENERATION_STRATEGY_PROVIDER,
-  GenerationStrategy,
-} from "./providers/generation-strategy.provider";
+import { GENERATION_STRATEGY_PROVIDER } from "./providers/generation-strategy.provider";
+import type { QuizGenerationStrategy } from "./strategies/generation-strategy";
 import { PrismaClient } from "../generated/prisma/client";
 import { PRISMA } from "./providers/prisma.provider";
 import { ScoringService } from "../scoring/scoring.service";
@@ -41,7 +39,7 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     @Inject(CHECKPOINTER) private readonly checkpointer: BaseCheckpointSaver,
     @Inject(LLM_PROVIDER) private llm: BaseChatModel,
     @Inject(GENERATION_STRATEGY_PROVIDER)
-    private generationStrategy: GenerationStrategy,
+    private generationStrategy: QuizGenerationStrategy,
     @Inject(LLM_MODEL_NAME) private llmModelName: string,
     @Inject(PRISMA) private prisma: PrismaClient,
     private readonly scoringService: ScoringService,
@@ -55,8 +53,9 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
       this.scoringService,
       {
         model: this.llmModelName,
-        strategy: this.generationStrategy,
+        strategy: this.generationStrategy.name,
       },
+      this.generationStrategy,
     );
   }
 
@@ -73,7 +72,7 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
         configurable: { thread_id: sessionId },
         // The metadata lands on the LangSmith trace of the run.
         metadata: {
-          strategy: this.generationStrategy,
+          strategy: this.generationStrategy.name,
           model: this.llmModelName,
         },
       },
@@ -109,7 +108,7 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
         {
           configurable: { thread_id: sessionId },
           metadata: {
-            strategy: this.generationStrategy,
+            strategy: this.generationStrategy.name,
             model: this.llmModelName,
           },
           streamMode: "updates",

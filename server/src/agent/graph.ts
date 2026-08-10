@@ -15,6 +15,7 @@ import { makePersistQuizNode } from "./nodes/persist-quiz";
 import { PrismaClient } from "../generated/prisma/client";
 import { makeScoreAnswersNode } from "./nodes/score-answers";
 import { ScoringService } from "../scoring/scoring.service";
+import type { QuizGenerationStrategy } from "./strategies/generation-strategy";
 
 /**
  * Builds and compiles the quiz graph.
@@ -34,10 +35,11 @@ export function buildQuizGraph(
   prisma: PrismaClient,
   scoringService: ScoringService,
   quizMeta: { model: string; strategy: string },
+  generationStrategy?: QuizGenerationStrategy,
 ) {
   return new StateGraph(QuizState)
     .addNode("fetchSource", makeFetchSourceNode())
-    .addNode("generateQuestions", makeGenerateQuestionsNode(llm))
+    .addNode("generateQuestions", makeGenerateQuestionsNode(llm, generationStrategy))
     .addNode("persistQuiz", makePersistQuizNode(prisma, quizMeta))
     .addNode("askQuestion", makeAskQuestionNode())
     .addNode("scoreAnswers", makeScoreAnswersNode(scoringService))

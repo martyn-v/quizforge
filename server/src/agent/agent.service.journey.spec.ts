@@ -9,6 +9,7 @@ import {
 import { ScoringService } from "../scoring/scoring.service";
 import { AgentService } from "./agent.service";
 import { makeDbQuiz, makeDraft, oid, qid } from "./quiz-fixtures";
+import { makeSinglePassStrategy } from "./strategies/single-pass.strategy";
 
 /**
  * Journey tests over the service surface. Unlike agent.service.spec.ts
@@ -32,7 +33,7 @@ function makeService() {
   const service = new AgentService(
     new MemorySaver(),
     new FakeListChatModel({ responses: [JSON.stringify(makeDraft())] }),
-    {} as never,
+    makeSinglePassStrategy(),
     "modelName",
     prisma,
     new ScoringService(

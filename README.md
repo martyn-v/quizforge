@@ -178,13 +178,14 @@ One interface controls question generation:
 | `chunked`               | Divides the document by section, generates for each part, then removes duplicates and selects the target number |
 
 The `GENERATION_STRATEGY` variable selects the strategy. To add a strategy,
-write one class and add one registry entry.
+implement the strategy interface and add one registry entry. The interface
+and the registry live in `server/src/agent/strategies`.
 
 ## Evals
 
 A scorecard controls the decisions about prompts and strategies. Do not
-examine the output and make a judgement. The `pnpm eval` command runs each
-generation strategy against a fixture set. The set contains three READMEs with
+examine the output and make a judgement. The `pnpm eval` command runs the
+selected generation strategy against a fixture set. The set contains three READMEs with
 different shapes: a library, an application and a sparse document. The command
 gives each generated quiz a score on two axes, and it also checks hygiene:
 

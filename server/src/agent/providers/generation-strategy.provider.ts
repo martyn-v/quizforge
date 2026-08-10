@@ -1,16 +1,10 @@
 import type { FactoryProvider } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-
-export enum GenerationStrategy {
-  /**
-   * Makes one generation call for the pruned document (default)
-   */
-  SINGLE_PASS = "single-pass",
-  /**
-   * Divides the document by section, generates for each part, then removes duplicates and selects the target number
-   */
-  CHUNKED = "chunked",
-}
+import { GENERATION_STRATEGIES } from "../strategies/registry";
+import {
+  GenerationStrategy,
+  type QuizGenerationStrategy,
+} from "../strategies/generation-strategy";
 
 export const GENERATION_STRATEGY_PROVIDER = Symbol(
   "GENERATION_STRATEGY_PROVIDER",
@@ -23,24 +17,23 @@ export const GENERATION_STRATEGY_PROVIDER = Symbol(
 // keeps the exact inferred signature, so the spec can call the factory.
 export const generationStrategyProvider = {
   provide: GENERATION_STRATEGY_PROVIDER,
-  useFactory: (config: ConfigService): GenerationStrategy => {
-    const strategy = config.get<string>(
+  useFactory: (config: ConfigService): QuizGenerationStrategy => {
+    const name = config.get<string>(
       "GENERATION_STRATEGY",
       GenerationStrategy.SINGLE_PASS.toString(),
     );
 
-    if (
-      !Object.values(GenerationStrategy).includes(
-        strategy as GenerationStrategy,
-      )
-    ) {
+    const strategy = GENERATION_STRATEGIES[name as GenerationStrategy];
+    // Fail here rather than hand back undefined: an unresolved strategy
+    // would boot cleanly and then throw on the first generation call.
+    if (!strategy) {
       throw new Error(
-        `Unknown GENERATION_STRATEGY: ${strategy}. Valid strategies are ${Object.values(
+        `Unknown GENERATION_STRATEGY: ${name}. Valid strategies are ${Object.values(
           GenerationStrategy,
         ).join(", ")}`,
       );
     }
-    return strategy as GenerationStrategy;
+    return strategy;
   },
   inject: [ConfigService],
-} satisfies FactoryProvider<GenerationStrategy>;
+} satisfies FactoryProvider<QuizGenerationStrategy>;
