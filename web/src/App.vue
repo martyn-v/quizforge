@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import type {
   AskQuestionPayload,
+  ProgressStage,
   PublicQuestion,
   QuizResult,
 } from '@quizforge/shared'
 import { ref } from 'vue'
-import { ApiError, startSession, submitAnswer } from './api'
+import { ApiError, startSessionStream, submitAnswer } from './api'
 import QuestionScreen from './components/QuestionScreen.vue'
 import ResultScreen from './components/ResultScreen.vue'
 import StartScreen from './components/StartScreen.vue'
@@ -21,6 +22,8 @@ const result = ref<QuizResult | null>(null)
 // Questions in the order the agent asked them. The result screen joins
 // them to the score record by question id.
 const askedQuestions = ref<PublicQuestion[]>([])
+// The stages the agent reported for the running start, in order.
+const stages = ref<ProgressStage[]>([])
 
 function messageOf(cause: unknown): string {
   if (cause instanceof ApiError) return cause.message
@@ -30,8 +33,11 @@ function messageOf(cause: unknown): string {
 async function handleStart(url: string) {
   busy.value = true
   error.value = ''
+  stages.value = []
   try {
-    const response = await startSession(url)
+    const response = await startSessionStream(url, (stage) => {
+      stages.value.push(stage)
+    })
     sessionId.value = response.sessionId
     payload.value = response.question
     askedQuestions.value = [response.question.question]
@@ -88,6 +94,7 @@ function handleRestart() {
         v-if="screen === 'start'"
         :busy="busy"
         :error="error"
+        :stages="stages"
         @start="handleStart"
       />
       <QuestionScreen

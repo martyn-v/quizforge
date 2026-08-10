@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { onUnmounted, ref, watch } from 'vue'
+import type { ProgressStage } from '@quizforge/shared'
+import { ref } from 'vue'
 
 const props = defineProps<{
   busy: boolean
   error: string
+  // The stages the agent reported so far, streamed over SSE. The last
+  // entry is the running stage; the entries before it are done.
+  stages: ProgressStage[]
 }>()
 
 const emit = defineEmits<{
@@ -11,28 +15,6 @@ const emit = defineEmits<{
 }>()
 
 const url = ref('')
-
-// Presentation only: the endpoints return plain JSON today, so the
-// stages advance on a timer, not on real progress events. The SSE
-// upgrade in Phase 3.5 replaces this with node-level progress.
-const STAGES = ['fetching source', 'generating questions'] as const
-const stage = ref(0)
-let stageTimer: ReturnType<typeof setTimeout> | undefined
-
-watch(
-  () => props.busy,
-  (busy) => {
-    clearTimeout(stageTimer)
-    stage.value = 0
-    if (busy) {
-      stageTimer = setTimeout(() => {
-        stage.value = 1
-      }, 2500)
-    }
-  },
-)
-
-onUnmounted(() => clearTimeout(stageTimer))
 
 function handleSubmit() {
   if (props.busy || !url.value.trim()) return
@@ -76,14 +58,20 @@ function handleSubmit() {
     </form>
 
     <div v-else class="mt-10 font-mono text-sm" role="status">
+      <p v-if="stages.length === 0">
+        <span class="cursor-blink text-accent">▌</span>
+      </p>
       <p
-        v-for="(label, index) in STAGES.slice(0, stage + 1)"
+        v-for="(label, index) in stages"
         :key="label"
         class="mt-2 first:mt-0"
-        :class="index < stage ? 'text-muted' : 'text-ink'"
+        :class="index < stages.length - 1 ? 'text-muted' : 'text-ink'"
       >
         <span class="text-accent">›</span> {{ label
-        }}<span v-if="index === stage" class="cursor-blink text-accent">&nbsp;▌</span>
+        }}<span
+          v-if="index === stages.length - 1"
+          class="cursor-blink text-accent"
+        >&nbsp;▌</span>
       </p>
     </div>
   </section>
