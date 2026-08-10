@@ -5,7 +5,7 @@
   "scripts": {
     "lint": "eslint . && pnpm typecheck",
     "lint:fix": "eslint . --fix",
-    "typecheck": "pnpm --filter server --filter shared --filter evals typecheck",
+    "typecheck": "pnpm --filter server --filter shared --filter evals --filter web typecheck",
     "dev": "process-compose up",
     "dev:down": "process-compose down",
     "dev:raw": "pnpm --parallel --filter server --filter web dev",
