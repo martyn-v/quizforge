@@ -30,8 +30,8 @@ function handleSubmit() {
       Turn a document into a&nbsp;quiz.
     </h1>
     <p class="mt-4 max-w-md text-lg text-muted">
-      Paste a link to a Markdown document. The agent reads it, writes a short
-      quiz, and scores your answers.
+      Paste a link to a Markdown file on GitHub. The agent reads it, writes a
+      short quiz, and scores your answers.
     </p>
 
     <form v-if="!busy" class="mt-10" @submit.prevent="handleSubmit">
@@ -46,6 +46,9 @@ function handleSubmit() {
         spellcheck="false"
         class="mt-2 w-full rounded-md border border-line bg-transparent px-4 py-3 font-mono text-sm placeholder:text-muted/50 focus:border-accent focus:ring-2 focus:ring-accent/25 focus:outline-none"
       />
+      <p class="mt-2 font-mono text-xs text-muted/70">
+        Only .md files on github.com or raw.githubusercontent.com work.
+      </p>
       <p v-if="error" class="mt-3 font-mono text-sm text-warn">
         {{ error }}
       </p>
