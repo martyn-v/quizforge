@@ -130,7 +130,22 @@ describe("structuralFailures", () => {
     const quiz = makeQuiz(5);
     quiz.questions[4] = bad;
     expect(structuralFailures(quiz)).toContain(
-      "question 5 is multi-answer with 1 correct option, expected 2 or more",
+      "question 5 is multi-answer with 1 correct option, expected 2 or 3",
+    );
+  });
+
+  // 4 correct options cannot separate knowledge from select-everything.
+  // The server generation schema rejects this shape; the eval must too.
+  it("flags a multi-answer question with 4 correct options", () => {
+    const bad = makeMultiQuestion();
+    bad.options = bad.options.map((option) => ({
+      ...option,
+      isCorrect: true,
+    }));
+    const quiz = makeQuiz(5);
+    quiz.questions[4] = bad;
+    expect(structuralFailures(quiz)).toContain(
+      "question 5 is multi-answer with 4 correct options, expected 2 or 3",
     );
   });
 });

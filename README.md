@@ -36,11 +36,15 @@ graph:
 | `POST /sessions/:id/answers` | Resumes with the answer, returns the next question or the score  |
 | `GET /sessions/:id`          | Returns the current session state                                |
 
-The `thread_id` is the session id.
+The `thread_id` is the session id. The API also serves `GET /health`.
+The process-compose readiness probe polls it.
 
 `POST /sessions` sends a stream. The response is SSE with a typed event
-union (`progress | question | result | error`, plus a reserved `token` kind
-for future framing lines). The `shared` package defines this union once, and
+union of five kinds: `progress | token | question | result | error`. The
+stream sends `progress`, `question` and `error`. The `token` kind is
+reserved for future framing lines. The `result` kind is reserved for a
+future answer stream. Today the answers endpoint returns the `result`
+payload as plain JSON. The `shared` package defines this union once, and
 the API and the web interface both import it. The stream sends node progress
 while the graph runs. It then sends the first question or a terminal error
 as one complete payload. The API never sends incomplete JSON. The native
@@ -56,7 +60,8 @@ Each question has a score:
 
 - A correct answer scores 4 points
 - A wrong answer scores 0 points
-- A multi-answer question scores the number of correct selections (0 to 4)
+- A multi-answer question scores the number of correct selections, from 0
+  to the count of correct options
 
 The final score is the weighted average of the question scores. The weights
 are a geometric sequence. The sequence starts at 1.0 and has a ratio of 1.1.
@@ -76,7 +81,9 @@ the scores.
 **A note about the multi-answer rule.** The specified rule counts correct
 selections, and it ignores wrong selections. A user who selects all the
 options therefore gets the maximum score. The rule measures recall, but it
-does not measure precision. The specified rule is the default. The
+does not measure precision. A multi-answer question has 2 or 3 correct
+options, so its maximum under this rule is 2 or 3, not 4. The specified
+rule is the default. The
 `SCORING_MODE` configuration variable selects a different rule. The `scaled`
 rule keeps the count and puts it on a scale of 0 to 4. The `penalized` rule
 subtracts wrong selections from correct selections and uses the same scale.
@@ -107,9 +114,10 @@ the decisions, and each decision is reversible:
   converts it to the raw.githubusercontent.com form. The node refuses any
   other host. The server makes the request, so an unrestricted URL lets a
   user reach an address that only the server can reach, such as a cloud
-  metadata endpoint or an internal port. The restriction also rejects a
-  redirect away from the permitted host. Any file on that host is acceptable,
-  not only `README.md`.
+  metadata endpoint or an internal port. The fetch refuses every redirect,
+  so a response cannot move away from the permitted host. Any Markdown file
+  on that host is acceptable, not only `README.md`. The node requires the
+  `.md` extension and caps a document at 200,000 characters.
 - **The default is to prune source documents, not to divide them.** A README
   fits in the context window after the removal of badges, HTML and link noise.
   The `chunked` strategy is available for larger documents. Refer to
@@ -129,7 +137,8 @@ These are the important parts of the design:
   to `@langchain/langgraph-checkpoint-postgres`. That package manages their
   schema and creates them with `setup()`. They hold serialized graph state, so
   the sessions continue after a restart. The domain tables (`Quiz`,
-  `Question`, `Option`, `Attempt`, `Answer`) belong to Prisma. They are the
+  `Question`, `Option`, `Attempt`, `Answer`, `AnswerSelection`) belong to
+  Prisma. They are the
   durable record for queries. Generation and the finalize node write them. Do
   not query the framework checkpoints for reports. Do not build session
   recovery on the relational tables, because the framework supplies it.
@@ -145,8 +154,10 @@ These are the important parts of the design:
   LangGraph keeps the resume value in the checkpoint and sends it again on a
   retry. An exception on a malformed answer therefore makes the thread
   permanently unusable. Each invalid answer becomes a new prompt with the
-  reason. This includes unknown option ids, the wrong number of selections and
-  a malformed body. Only a valid answer completes a question.
+  reason. This includes unknown option ids and a wrong selection count on a
+  single-answer question. A malformed request body never reaches the loop,
+  because the API validation pipe rejects it with a 400 response. Only a
+  valid answer completes a question.
 - **The question loop lives in one node, not in the edges.** The `askQuestion`
   node loops over all the questions and calls `interrupt()` for each one. The
   alternative is a graph-level loop: a cursor channel in state, one question
@@ -183,7 +194,9 @@ One interface controls question generation:
 | `single-pass` (default) | Makes one generation call for the pruned document                            |
 | `chunked`               | Divides the document by section, generates for each part, then removes duplicates and selects the target number |
 
-The `GENERATION_STRATEGY` variable selects the strategy. To add a strategy,
+The `GENERATION_STRATEGY` variable selects the strategy. The `chunked`
+strategy falls back to `single-pass` when the document has fewer than two
+sections. To add a strategy,
 implement the strategy interface and add one registry entry. The interface
 and the registry live in `server/src/agent/strategies`.
 
@@ -208,17 +221,24 @@ Deterministic checks control the number of options, the number of questions,
 the number of correct options and the question mix. A quiz must contain both
 question types, so both scoring paths get exercise. A question must not
 reveal how many options are correct, for example with "select 2" in the
-question text. These checks run before the judge. The scorecard also reports two indicators per fixture: the share
-of multi-answer questions, and the number of repair rounds that generation
-needed. The command writes each scorecard to a local JSON file. A prompt
-change therefore has a score from before the change and after it. The judge
-gives a score to the generator. It never gives a score to the user.
+question text. These checks run before the judge. The scorecard also reports three
+indicators per fixture: the share of multi-answer questions, the number of
+repair rounds that generation needed, and the generation latency. The
+command writes each scorecard to a local JSON file. A prompt change
+therefore has a score from before the change and after it. The judge gives
+a score to the generator. It never gives a score to the user.
+
+The fixture manifest pins three real README URLs at fixed commits: a
+library, an application and a sparse document. Generation therefore runs
+against more than two different real documents on every eval. Refer to
+[evals/README.md](evals/README.md) for the commands, the configuration,
+the fixture manifest and the judge calibration harness.
 
 ## Quickstart
 
 ```
-mise install                  # installs the Node and pnpm versions from mise.toml
-docker compose up -d          # starts Postgres
+mise install                  # installs Node, pnpm and process-compose from mise.toml
+docker compose up -d          # starts Postgres for the migrate step
 cp .env.example .env          # local Ollama by default; set GROQ_API_KEY for Groq
 pnpm install
 pnpm prisma migrate dev       # creates the domain tables
@@ -226,8 +246,30 @@ pnpm dev                      # API on :3000, web on :5173
 pnpm eval                     # optional: gives generation quality a score
 ```
 
-The checkpointer creates its own tables. Open the web interface. Give it a
-Markdown URL on GitHub. Then answer the questions.
+The checkpointer creates its own tables. The `pnpm dev` command runs
+process-compose, which also starts Postgres itself. Open the web interface.
+Give it a Markdown URL on GitHub. Then answer the questions.
+
+## Configuration
+
+The `.env.example` file documents every variable, its default and its
+effect. Copy it to `.env` and edit the copy. This table lists the seams:
+
+| Variable                      | Effect                                                       |
+| ----------------------------- | ------------------------------------------------------------ |
+| `LLM_PROVIDER`                | selects `ollama` (default, local) or `groq`                  |
+| `OLLAMA_MODEL`, `GROQ_MODEL`  | select the generation model for each provider                |
+| `LLM_TEMPERATURE`, `LLM_THINK`| tune generation; empty keeps the provider defaults           |
+| `GENERATION_STRATEGY`         | selects `single-pass` (default) or `chunked`                 |
+| `SCORING_MODE`                | selects `spec` (default), `scaled` or `penalized`            |
+| `CORS_ORIGIN`                 | sets the accepted web origin, default `http://localhost:5173`|
+| `DATABASE_URL`, `POSTGRES_*`  | configure the database connection and the compose container  |
+| `LANGSMITH_*`                 | enable tracing; refer to Observability                       |
+| `JUDGE_*`                     | configure the eval judge; refer to [evals/README.md](evals/README.md) |
+
+The web interface reads one variable of its own: `VITE_API_URL`, the API
+base URL. The default is `http://localhost:3000`. Set it in `web/.env`
+when the API is not local.
 
 ## Observability
 
@@ -248,11 +290,13 @@ not fail the eval run.
 
 ## Roadmap
 
-- **An error `code` on SSE `error` events.** The stream already ends with a
-  typed `error` event that carries a fixed, user-safe message, and the raw
-  cause stays in the server log. A `code` field mapped from the error class
-  would let the web interface act on the cause, for example offer a retry
-  after a fetch failure.
+- **An error `code` on SSE `error` events, and a log line for the cause.**
+  The stream already ends with a typed `error` event that carries a
+  user-safe message. The raw cause does not reach the client, but the
+  server does not log it yet. A log line at the catch site would make
+  failures visible to an operator. A `code` field mapped from the error
+  class would let the web interface act on the cause, for example offer a
+  retry after a fetch failure.
 - **A `status` column on the `Quiz` row.** A reloaded page cannot see a
   past `error` event. The same catch site writes the failure to the domain
   table. This work waits until the web interface needs reconnect.
@@ -271,6 +315,12 @@ not fail the eval run.
   of each session. The benefit at this scale is too small.
 - **The application runs in one process.** The Postgres checkpointer permits
   horizontal scaling, but nothing here needs it.
+- **A replayed write node can duplicate a row.** A crash between a domain
+  write and its checkpoint makes LangGraph run the node again. A replay of
+  `persistQuiz` can then write a second `Quiz`, and a replay of `finalize`
+  a second `Attempt`. An upsert keyed on the thread id would make both
+  writes idempotent. The window is one process crash inside a narrow gap,
+  so the fix waits.
 - **Answer validation exists in two places.** The interrupt loop in
   `askQuestion` validates each answer inline and re-prompts on a bad one,
   because that loop must never throw. `ScoringService.scoreQuestion`

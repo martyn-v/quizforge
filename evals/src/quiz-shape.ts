@@ -62,9 +62,13 @@ export function structuralFailures(quiz: DraftQuiz): string[] {
         `${label} is single-answer with ${correct} correct options, expected 1`,
       );
     }
-    if (question.type === "multi" && correct < 2) {
+    // Mirror the server generation schema: 2 or 3 correct. A question
+    // with 4 correct options cannot separate knowledge from the
+    // select-everything strategy.
+    if (question.type === "multi" && (correct < 2 || correct > 3)) {
+      const noun = correct === 1 ? "option" : "options";
       failures.push(
-        `${label} is multi-answer with ${correct} correct option, expected 2 or more`,
+        `${label} is multi-answer with ${correct} correct ${noun}, expected 2 or 3`,
       );
     }
   });

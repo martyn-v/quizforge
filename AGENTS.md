@@ -66,7 +66,8 @@ implementing something else.
   a test swap in `MemorySaver`.
 - Two ownership zones in one Postgres: checkpointer tables are
   framework-owned (never queried directly), domain tables
-  (`Quiz`, `Question`, `Option`, `Attempt`, `Answer`) are Prisma-owned.
+  (`Quiz`, `Question`, `Option`, `Attempt`, `Answer`, `AnswerSelection`)
+  are Prisma-owned.
 - `thread_id` = session id.
 - LLM provider and generation strategy sit behind DI tokens; swap by
   config (`GENERATION_STRATEGY`, provider env), never by code edits.
