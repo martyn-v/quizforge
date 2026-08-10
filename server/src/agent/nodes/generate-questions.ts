@@ -18,7 +18,7 @@ Rules:
 - Each question must have exactly 4 options.
 - Each question must have at least one correct option.
 - Each question must be either a single-choice or multiple-choice question.
-- Multi-choice questions must have at least 2 correct options.
+- Multi-choice questions must have 2 or 3 correct options.
 - The questions and options must be in English.
 - The questions and options must be in the same language as the source material.
 `;
@@ -34,8 +34,9 @@ function isToolUseFailure(error: unknown): boolean {
   if (typeof error !== "object" || error === null) {
     return false;
   }
-  const body = (error as { error?: { code?: unknown; error?: { code?: unknown } } })
-    .error;
+  const body = (
+    error as { error?: { code?: unknown; error?: { code?: unknown } } }
+  ).error;
   return (
     body?.code === "tool_use_failed" || body?.error?.code === "tool_use_failed"
   );

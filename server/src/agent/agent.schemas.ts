@@ -19,7 +19,16 @@ export const GeneratedQuizSchema = DraftQuizSchema.extend({
           .min(4)
           .max(4)
           .describe("The options for the question"),
-      }),
+      }).refine(
+        (q) => {
+          if (q.type !== "multi") {
+            return true;
+          }
+          const correct = q.options.filter((o) => o.isCorrect).length;
+          return correct === 2 || correct === 3;
+        },
+        { message: "A multi question must have 2 or 3 correct options" },
+      ),
     )
     .min(5)
     .max(8)
