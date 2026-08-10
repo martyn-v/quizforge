@@ -300,6 +300,11 @@ not fail the eval run.
 - **A `status` column on the `Quiz` row.** A reloaded page cannot see a
   past `error` event. The same catch site writes the failure to the domain
   table. This work waits until the web interface needs reconnect.
+- **Parallel section calls in the chunked strategy.** The strategy calls
+  the model once per section, one call after the other. Generation time
+  grows with the section count. Concurrent calls would reduce the total
+  time to the time of the slowest section. The merge step already sorts
+  questions by section, so the completion order does not matter.
 
 ## Known limitations, deliberate at this scope
 
