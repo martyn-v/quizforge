@@ -19,6 +19,40 @@ import {
 // results JSON: pnpm eval "before the mix prompt change".
 const comment = process.argv[2] ?? null;
 
+// "provider default" means the variable is unset and the model uses its
+// own default. The judge defaults are set in buildJudgeModel. The model
+// field holds the model of the active provider.
+const generatorProvider = process.env.LLM_PROVIDER ?? "ollama";
+const generatorInfo = {
+  provider: generatorProvider,
+  strategy: process.env.GENERATION_STRATEGY ?? "single-pass",
+  model:
+    generatorProvider === "groq"
+      ? (process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile")
+      : (process.env.OLLAMA_MODEL ?? "gemma4:31b"),
+  temperature: process.env.LLM_TEMPERATURE || "provider default",
+  think: process.env.LLM_THINK || "provider default",
+};
+const judgeProvider = process.env.JUDGE_PROVIDER ?? "ollama";
+const judgeInfo = {
+  provider: judgeProvider,
+  model:
+    judgeProvider === "groq"
+      ? (process.env.JUDGE_GROQ_MODEL ?? null)
+      : (process.env.JUDGE_OLLAMA_MODEL ?? null),
+  temperature: process.env.JUDGE_TEMPERATURE || "0",
+  think: process.env.JUDGE_THINK || "false",
+};
+
+console.log(
+  `generator: ${generatorInfo.provider}/${generatorInfo.model} ` +
+    `(${generatorInfo.strategy}, temperature=${generatorInfo.temperature}, think=${generatorInfo.think})`,
+);
+console.log(
+  `judge: ${judgeInfo.provider}/${judgeInfo.model} ` +
+    `(temperature=${judgeInfo.temperature}, think=${judgeInfo.think})\n`,
+);
+
 const generator = buildGeneratorModel();
 const judge = buildJudgeModel();
 // TS resolves @langchain/core as ESM here and as CommonJS in server, so
@@ -101,39 +135,6 @@ for (const fixture of loadManifest()) {
   scores.push(aggregateScore(fixture.id, quiz, verdicts, coverage, retries));
 }
 
-// "provider default" means the variable is unset and the model uses its
-// own default. The judge defaults are set in buildJudgeModel. The model
-// field holds the model of the active provider.
-const generatorProvider = process.env.LLM_PROVIDER ?? "ollama";
-const generatorInfo = {
-  provider: generatorProvider,
-  strategy: process.env.GENERATION_STRATEGY ?? "single-pass",
-  model:
-    generatorProvider === "groq"
-      ? (process.env.GROQ_MODEL ?? "llama-3.3-70b-versatile")
-      : (process.env.OLLAMA_MODEL ?? "gemma4:31b"),
-  temperature: process.env.LLM_TEMPERATURE || "provider default",
-  think: process.env.LLM_THINK || "provider default",
-};
-const judgeProvider = process.env.JUDGE_PROVIDER ?? "ollama";
-const judgeInfo = {
-  provider: judgeProvider,
-  model:
-    judgeProvider === "groq"
-      ? (process.env.JUDGE_GROQ_MODEL ?? null)
-      : (process.env.JUDGE_OLLAMA_MODEL ?? null),
-  temperature: process.env.JUDGE_TEMPERATURE || "0",
-  think: process.env.JUDGE_THINK || "false",
-};
-
-console.log(
-  `\ngenerator: ${generatorInfo.provider}/${generatorInfo.model} ` +
-    `(${generatorInfo.strategy}, temperature=${generatorInfo.temperature}, think=${generatorInfo.think})`,
-);
-console.log(
-  `judge: ${judgeInfo.provider}/${judgeInfo.model} ` +
-    `(temperature=${judgeInfo.temperature}, think=${judgeInfo.think})`,
-);
 console.log(`\n${formatScorecard(scores)}\n`);
 
 const resultsDir = join(
