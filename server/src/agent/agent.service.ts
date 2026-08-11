@@ -205,6 +205,11 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Retrieves the current state of a session, including the next question or final score.
+   * @param sessionId - The ID of the session to retrieve.
+   * @returns A promise that resolves to the SubmitAnswerResponse.
+   */
   async getSession(sessionId: string): Promise<SubmitAnswerResponse> {
     const snapshot = await this.requireSession(sessionId);
 

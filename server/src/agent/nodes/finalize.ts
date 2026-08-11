@@ -3,6 +3,17 @@ import { QuizState } from "../state";
 import { PrismaClient } from "../../generated/prisma/client";
 import { InvalidStateError } from "../../common/errors";
 
+/**
+ * Creates a graph node that finalizes the quiz attempt by persisting the attempt and answers to the database using Prisma.
+ *
+ * The node checks for the required state properties and config properties, and then creates a new attempt in the database with the final score and answers.
+ * It returns a partial state with the attempt ID.
+ *
+ * @param prisma - The Prisma client used to interact with the database.
+ *
+ * @returns A graph node that finalizes the quiz attempt.
+ * @throws InvalidStateError if any required state or config properties are missing or incomplete.
+ */
 export function makeFinalizeNode(
   prisma: PrismaClient,
 ): GraphNode<typeof QuizState> {

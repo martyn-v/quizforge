@@ -9,10 +9,15 @@ import {
 } from "../strategies/generation-strategy";
 
 /**
- * Adapts a generation strategy to a graph node. The strategy does the
- * work; the node only maps graph state to the strategy call. The
- * strategies live in ../strategies, behind the registry that
- * generationStrategyProvider selects from.
+ * Creates a graph node that generates quiz questions based on the source material using the provided LLM and generation strategy.
+ *
+ * The node uses the specified generation strategy to generate questions from the source material in the state.
+ * It returns a partial state with the generated draft of questions.
+ *
+ * @param llm - The language model used for generating questions.
+ * @param strategy - The generation strategy to use for generating questions. Defaults to the SINGLE_PASS strategy.
+ * @returns A graph node that generates quiz questions.
+ * @throws InvalidStateError if the source material is missing from the state.
  */
 export function makeGenerateQuestionsNode(
   llm: BaseChatModel,

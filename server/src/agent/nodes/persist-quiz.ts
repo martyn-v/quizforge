@@ -5,6 +5,21 @@ import { PersistQuizError, InvalidStateError } from "../../common/errors";
 import { QuizState } from "../state";
 import { fromDbQuestionType, toDbQuestionType } from "../question-type-map";
 
+/**
+ * Creates a graph node that persists the quiz to the database using Prisma.
+ *
+ * We persist the quiz based on the draft and return the object of the quiz including the database ids so we have stable identifiers for the rest of the graph.
+ * The node returns a partial state with the quiz and the startedAt timestamp.
+ *
+ * If the quiz is already persisted, it leaves the state unchanged.
+ * If the draft is missing, it throws an InvalidStateError.
+ * If the persistence fails, it throws a PersistQuizError.
+ *
+ * @param prisma - The Prisma client used to interact with the database.
+ * @param quizMeta - Metadata about the quiz, including the model and strategy used for generation.
+ * @returns A graph node that persists the quiz to the database.
+ * @throws InvalidStateError if the draft is missing from the state.
+ */
 export function makePersistQuizNode(
   prisma: PrismaClient,
   quizMeta: { model: string; strategy: string },

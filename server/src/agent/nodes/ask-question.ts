@@ -8,6 +8,16 @@ import { z } from "zod/v4";
 import { InvalidStateError } from "../../common/errors";
 import { QuizState } from "../state";
 
+/**
+ * Creates a graph node that asks the user a question and collects their answers.
+ *
+ * The node iterates through the questions in the quiz and prompts the user for their selections.
+ * It validates the user's selections against the valid option IDs for each question.
+ * If the selections are invalid, it provides feedback and re-prompts the user until valid selections are made.
+ *
+ * @returns A graph node that asks the user a question and collects their answers.
+ * @throws InvalidStateError if the quiz state is missing or if the user's selections are invalid.
+ */
 export function makeAskQuestionNode(): GraphNode<typeof QuizState> {
   return (state) => {
     if (!state.quiz) {

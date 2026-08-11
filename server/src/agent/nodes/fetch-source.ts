@@ -115,6 +115,15 @@ export async function fetchGithubReadme(url: string): Promise<string> {
   return text;
 }
 
+/**
+ * Creates a graph node that fetches the source README from GitHub and cleans it for quiz generation.
+ *
+ * The node validates the provided URL, fetches the README content, and cleans it by removing badges, inline HTML, and link targets.
+ * It returns a partial state with the cleaned source and the raw GitHub URL.
+ *
+ * @returns A graph node that fetches and cleans the source README.
+ * @throws FetchSourceError if the URL is invalid, the fetch fails, or the content exceeds the maximum allowed size.
+ */
 export function makeFetchSourceNode(): GraphNode<typeof QuizState> {
   return async (state) => {
     // Validate before converting, so the error names the url the user typed.
