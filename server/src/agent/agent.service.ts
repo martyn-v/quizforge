@@ -30,7 +30,12 @@ import {
 } from "@quizforge/shared";
 import { LLM_MODEL_NAME } from "./providers/llm-model-name.provider";
 
-/** Compiles the graph once at startup and holds it. */
+/**
+ * Service responsible for managing quiz sessions.
+ *
+ * It provides methods to start a new session, submit answers, and retrieve the current state of a session.
+ * The service interacts with the underlying quiz graph and handles session state management.
+ */
 @Injectable()
 export class AgentService implements OnModuleInit, OnModuleDestroy {
   private graph!: QuizGraph;
@@ -45,6 +50,13 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     private readonly scoringService: ScoringService,
   ) {}
 
+  /**
+   * Initializes the quiz graph when the module is initialized.
+   * This method is called automatically by the NestJS framework when the module is initialized.
+   * It builds the quiz graph using the provided LLM, checkpointer, Prisma client, scoring service, and generation strategy.
+   * The graph is stored in the `graph` property for later use in session management.
+   * @returns void
+   */
   onModuleInit() {
     this.graph = buildQuizGraph(
       this.llm,
@@ -59,10 +71,21 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     );
   }
 
+  /**
+   * Disconnects the Prisma client when the module is destroyed.
+   * This method is called automatically by the NestJS framework when the module is destroyed.
+   * It ensures that the Prisma client is properly disconnected to free up resources.
+   * @returns void
+   */
   async onModuleDestroy() {
     await this.prisma.$disconnect();
   }
 
+  /**
+   * Starts a new quiz session with the provided URL.
+   * @param url - The URL to start the session with.
+   * @returns A promise that resolves to the StartSessionResponse containing the session ID and the first question.
+   */
   async startSession(url: string): Promise<StartSessionResponse> {
     const sessionId = crypto.randomUUID();
 
@@ -90,12 +113,13 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * The streaming variant of startSession (docs/PLAN.md Phase 3.5).
-   * Yields a progress event as each stage starts and ends with the
-   * first question. The update payloads never cross this boundary:
-   * only the node names steer the events, so isCorrect stays inside
-   * (AGENTS.md rule 2). The question passes the same schema parse as
-   * the JSON path.
+   * Starts a new quiz session with the provided URL and streams the events as they occur.
+   *
+   * This method returns an async generator that yields StreamEvent objects representing the progress and questions of the session.
+   * The session ID is generated randomly and used to track the session state.
+   * @param url - The URL to start the session with.
+   * @returns An async generator that yields StreamEvent objects.
+   * @throws InvalidStateError if the graph does not interrupt as expected after starting a session.
    */
   async *startSessionStream(url: string): AsyncGenerator<StreamEvent> {
     const sessionId = crypto.randomUUID();
@@ -141,6 +165,15 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
+  /**
+   * Submits an answer to the session.
+   *
+   * The response is the next question or the quiz result.
+   *
+   * @param sessionId - The ID of the session to submit the answer to.
+   * @param selections - The selected answers for the current question.
+   * @returns A promise that resolves to the SubmitAnswerResponse.
+   */
   async submitAnswer(
     sessionId: string,
     selections: string[],
