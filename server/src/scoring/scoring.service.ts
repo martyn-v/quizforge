@@ -53,6 +53,15 @@ export class ScoringService {
     }
   }
 
+  /**
+   * Scores a question based on the provided answer option IDs.
+   *
+   * Validates the answer before scoring. If the answer is invalid, an InvalidAnswerError is thrown.
+   * @param question - The question to score.
+   * @param answerOptionIds - The set of answer option IDs provided by the user.
+   * @returns A ScoredAnswer object containing the score for the question.
+   * @throws InvalidAnswerError if the answer is invalid for the given question.
+   */
   scoreQuestion(
     question: ScorableQuestion,
     answerOptionIds: ReadonlySet<string>,
