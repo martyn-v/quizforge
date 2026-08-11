@@ -30,11 +30,11 @@ checkpoint. When the last question has a valid answer, **scoreAnswers**
 scores all the answers in one pass. The REST API only starts and resumes the
 graph:
 
-| Endpoint                     | Role                                                             |
-| ---------------------------- | ---------------------------------------------------------------- |
-| `POST /sessions`             | Starts the graph, runs to the first pause, returns question 1     |
-| `POST /sessions/:id/answers` | Resumes with the answer, returns the next question or the score  |
-| `GET /sessions/:id`          | Returns the current session state                                |
+| Endpoint                     | Role                                                            |
+| ---------------------------- | --------------------------------------------------------------- |
+| `POST /sessions`             | Starts the graph, runs to the first pause, returns question 1   |
+| `POST /sessions/:id/answers` | Resumes with the answer, returns the next question or the score |
+| `GET /sessions/:id`          | Returns the current session state                               |
 
 The `thread_id` is the session id. The API also serves `GET /health`.
 The process-compose readiness probe polls it.
@@ -189,9 +189,9 @@ These are the important parts of the design:
 
 One interface controls question generation:
 
-| Strategy                | Approach                                                                     |
-| ----------------------- | ---------------------------------------------------------------------------- |
-| `single-pass` (default) | Makes one generation call for the pruned document                            |
+| Strategy                | Approach                                                                                                        |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `single-pass` (default) | Makes one generation call for the pruned document                                                               |
 | `chunked`               | Divides the document by section, generates for each part, then removes duplicates and selects the target number |
 
 The `GENERATION_STRATEGY` variable selects the strategy. The `chunked`
@@ -255,17 +255,17 @@ Give it a Markdown URL on GitHub. Then answer the questions.
 The `.env.example` file documents every variable, its default and its
 effect. Copy it to `.env` and edit the copy. This table lists the seams:
 
-| Variable                      | Effect                                                       |
-| ----------------------------- | ------------------------------------------------------------ |
-| `LLM_PROVIDER`                | selects `ollama` (default, local), `groq` or `anthropic`     |
-| `OLLAMA_MODEL`, `GROQ_MODEL`, `ANTHROPIC_MODEL` | select the generation model for each provider |
-| `LLM_TEMPERATURE`, `LLM_THINK`| tune generation; empty keeps the provider defaults; the Anthropic seam does not send them |
-| `GENERATION_STRATEGY`         | selects `single-pass` (default) or `chunked`                 |
-| `SCORING_MODE`                | selects `spec` (default), `scaled` or `penalized`            |
-| `CORS_ORIGIN`                 | sets the accepted web origin, default `http://localhost:5173`|
-| `DATABASE_URL`, `POSTGRES_*`  | configure the database connection and the compose container  |
-| `LANGSMITH_*`                 | enable tracing; refer to Observability                       |
-| `JUDGE_*`                     | configure the eval judge; refer to [evals/README.md](evals/README.md) |
+| Variable                                        | Effect                                                                                    |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `LLM_PROVIDER`                                  | selects `ollama` (default, local), `groq` or `anthropic`                                  |
+| `OLLAMA_MODEL`, `GROQ_MODEL`, `ANTHROPIC_MODEL` | select the generation model for each provider                                             |
+| `LLM_TEMPERATURE`, `LLM_THINK`                  | tune generation; empty keeps the provider defaults; the Anthropic seam does not send them |
+| `GENERATION_STRATEGY`                           | selects `single-pass` (default) or `chunked`                                              |
+| `SCORING_MODE`                                  | selects `spec` (default), `scaled` or `penalized`                                         |
+| `CORS_ORIGIN`                                   | sets the accepted web origin, default `http://localhost:5173`                             |
+| `DATABASE_URL`, `POSTGRES_*`                    | configure the database connection and the compose container                               |
+| `LANGSMITH_*`                                   | enable tracing; refer to Observability                                                    |
+| `JUDGE_*`                                       | configure the eval judge; refer to [evals/README.md](evals/README.md)                     |
 
 The web interface reads one variable of its own: `VITE_API_URL`, the API
 base URL. The default is `http://localhost:3000`. Set it in `web/.env`
@@ -305,6 +305,8 @@ not fail the eval run.
   grows with the section count. Concurrent calls would reduce the total
   time to the time of the slowest section. The merge step already sorts
   questions by section, so the completion order does not matter.
+- **Logging**
+- **Write the scoring strategy to the database**
 
 ## Known limitations, deliberate at this scope
 
