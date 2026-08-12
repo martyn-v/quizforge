@@ -143,6 +143,7 @@ describe("AgentService against the real graph", () => {
       kind: "progress",
       stage: "checking for existing quiz",
     });
+    expect(JSON.stringify(events)).not.toContain("isCorrect");
   });
 
   it("throws SessionNotFoundError for an unknown session on read and on submit", async () => {
