@@ -20,3 +20,6 @@ export class GenerateQuestionsError extends AgentError {}
 
 /** There was an error persisting the quiz */
 export class PersistQuizError extends AgentError {}
+
+/** The stored quiz could not be read */
+export class LoadQuizError extends AgentError {}

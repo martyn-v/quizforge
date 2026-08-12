@@ -142,7 +142,13 @@ export class AgentService implements OnModuleInit, OnModuleDestroy {
     let interrupt: unknown;
     for await (const update of stream) {
       if ("fetchSource" in update) {
-        yield { kind: "progress", stage: "generating questions" };
+        yield { kind: "progress", stage: "checking for existing quiz" };
+      }
+      if ("loadQuiz" in update) {
+        const loaded = update.loadQuiz as { quiz?: unknown } | null;
+        if (!loaded?.quiz) {
+          yield { kind: "progress", stage: "generating questions" };
+        }
       }
       if ("generateQuestions" in update) {
         yield { kind: "progress", stage: "saving quiz" };

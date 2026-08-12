@@ -14,14 +14,14 @@ One LangGraph graph controls the full session. The graph is checkpointed to
 Postgres:
 
 ```
-fetchSource -> generateQuestions -> persistQuiz -> askQuestion -> scoreAnswers -> finalize
-                                                       |
-                                             loops inside the node:
-                                             one interrupt() per question
+fetchSource -> loadQuiz -> generateQuestions -> persistQuiz -> askQuestion -> scoreAnswers -> finalize
+                   |                                               ^  |
+                   +--------------- quiz found --------------------+  |
+                                                     loops inside the node:
+                                                     one interrupt() per question
 ```
 
-The graph is a straight line. The question loop lives inside the
-**askQuestion** node, not in the edges. The node calls `interrupt()` once per
+The graph has one branch. **loadQuiz** looks for a stored quiz with the same source URL. When it finds one, the graph serves the newest stored quiz and skips generation. The graph does not check the source for changes yet. The question loop lives inside the **askQuestion** node, not in the edges. The node calls `interrupt()` once per
 question with the question payload. Each `interrupt()` makes a durable pause:
 the graph writes a checkpoint, and the process can stop and start again
 between the question and the answer. The answer arrives as a

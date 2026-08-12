@@ -14,6 +14,7 @@ import { AskQuestionPayloadSchema, QuizResultSchema } from "./quiz";
 /** The progress stages of a session start, in order. */
 export const ProgressStageSchema = z.enum([
   "fetching source",
+  "checking for existing quiz",
   "generating questions",
   "saving quiz",
 ]);

@@ -1,10 +1,10 @@
 import type { GraphNode } from "@langchain/langgraph";
-import type { Quiz } from "@quizforge/shared";
 import { PrismaClient } from "../../generated/prisma/client";
 import { PersistQuizError, InvalidStateError } from "../../common/errors";
 import { QuizState } from "../state";
-import { fromDbQuestionType, toDbQuestionType } from "../question-type-map";
+import { toDbQuestionType } from "../question-type-map";
 import { shuffle } from "../../common/shuffle";
+import { toQuiz } from "../db-quiz";
 
 /**
  * Creates a graph node that persists the quiz to the database using Prisma.
@@ -76,21 +76,7 @@ export function makePersistQuizNode(
         },
       });
 
-      const quiz: Quiz = {
-        id: created.id,
-        title: created.title,
-        description: created.description ?? undefined,
-        questions: created.questions.map((q) => ({
-          id: q.id,
-          text: q.text,
-          type: fromDbQuestionType(q.type),
-          options: q.options.map((o) => ({
-            id: o.id,
-            text: o.text,
-            isCorrect: o.isCorrect,
-          })),
-        })),
-      };
+      const quiz = toQuiz(created);
 
       return { quiz, startedAt: new Date().toISOString() };
     } catch (error) {

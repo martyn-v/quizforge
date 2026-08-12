@@ -10,6 +10,7 @@ import { makeFinalizeNode } from "./nodes/finalize";
 
 import { makeFetchSourceNode } from "./nodes/fetch-source";
 import { makeGenerateQuestionsNode } from "./nodes/generate-questions";
+import { makeLoadQuizNode } from "./nodes/load-quiz";
 import { QuizState } from "./state";
 import { makePersistQuizNode } from "./nodes/persist-quiz";
 import { PrismaClient } from "../generated/prisma/client";
@@ -28,6 +29,9 @@ import type { QuizGenerationStrategy } from "./strategies/generation-strategy";
  *
  * The dependencies are parameters and not injected, so a test builds the
  * same graph with a fake model and a MemorySaver.
+ *
+ * The loadQuiz node serves a stored quiz for a known source url and skips
+ * generation.
  */
 export function buildQuizGraph(
   llm: BaseChatModel,
@@ -39,13 +43,21 @@ export function buildQuizGraph(
 ) {
   return new StateGraph(QuizState)
     .addNode("fetchSource", makeFetchSourceNode())
+    .addNode("loadQuiz", makeLoadQuizNode(prisma))
     .addNode("generateQuestions", makeGenerateQuestionsNode(llm, generationStrategy))
     .addNode("persistQuiz", makePersistQuizNode(prisma, quizMeta))
     .addNode("askQuestion", makeAskQuestionNode())
     .addNode("scoreAnswers", makeScoreAnswersNode(scoringService))
     .addNode("finalize", makeFinalizeNode(prisma))
     .addEdge(START, "fetchSource")
-    .addEdge("fetchSource", "generateQuestions")
+    .addEdge("fetchSource", "loadQuiz")
+    // The branch: a stored quiz goes straight to the questions, a miss
+    // generates and persists a new quiz first.
+    .addConditionalEdges(
+      "loadQuiz",
+      (state) => (state.quiz ? "askQuestion" : "generateQuestions"),
+      ["askQuestion", "generateQuestions"],
+    )
     .addEdge("generateQuestions", "persistQuiz")
     .addEdge("persistQuiz", "askQuestion")
     .addEdge("askQuestion", "scoreAnswers")
