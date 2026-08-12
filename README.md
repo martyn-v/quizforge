@@ -21,8 +21,12 @@ fetchSource -> loadQuiz -> generateQuestions -> persistQuiz -> askQuestion -> sc
                                                      one interrupt() per question
 ```
 
-The graph has one branch. **loadQuiz** looks for a stored quiz with the same source URL. When it finds one, the graph serves the newest stored quiz and skips generation. The graph does not check the source for changes yet. The question loop lives inside the **askQuestion** node, not in the edges. The node calls `interrupt()` once per
-question with the question payload. Each `interrupt()` makes a durable pause:
+The graph has one branch. **loadQuiz** looks for a stored quiz with the
+same source URL. When it finds one, the graph serves the newest stored
+quiz and skips generation. The graph does not check the source for changes
+yet. The question loop lives inside the **askQuestion** node, not in the
+edges. The node calls `interrupt()` once per question with the question
+payload. Each `interrupt()` makes a durable pause:
 the graph writes a checkpoint, and the process can stop and start again
 between the question and the answer. The answer arrives as a
 `Command({ resume: { selections } })`. The graph then continues from the
