@@ -85,6 +85,7 @@ describe("the quiz graph", () => {
     const prisma = makePrismaMock();
     const quizId = crypto.randomUUID();
     const attemptId = crypto.randomUUID();
+    prisma.quiz.findFirst.mockResolvedValue(null);
     prisma.quiz.create.mockResolvedValue(makeDbQuiz(quizId));
     prisma.attempt.create.mockResolvedValue({ id: attemptId } as never);
     const graph = buildTestGraph([JSON.stringify(fakeDraft)], prisma);
@@ -152,6 +153,7 @@ describe("the quiz graph", () => {
   it("requests the raw url, never the blob url", async () => {
     const fetchMock = stubFetch("# Title");
     const prisma = makePrismaMock();
+    prisma.quiz.findFirst.mockResolvedValue(null);
     prisma.quiz.create.mockResolvedValue(makeDbQuiz(crypto.randomUUID()));
 
     await buildTestGraph([JSON.stringify(fakeDraft)], prisma).invoke(
@@ -178,6 +180,7 @@ describe("the quiz graph", () => {
     // ARRANGE:
     stubFetch("# Title");
     const prisma = makePrismaMock();
+    prisma.quiz.findFirst.mockResolvedValue(null);
     prisma.quiz.create.mockResolvedValue(makeDbQuiz(crypto.randomUUID()));
     const graph = buildTestGraph([JSON.stringify(fakeDraft)], prisma);
     const thread = newThread();
@@ -237,5 +240,50 @@ describe("the quiz graph", () => {
     expect(validPayload.question.text).toEqual(fakeDraft.questions[1].text);
     expect(validPayload.question.type).toEqual(fakeDraft.questions[1].type);
     expect(validPayload.reason).toBeUndefined(); // No reason for valid answer
+  });
+
+  it("serves the stored quiz and skips generation when the source url has one", async () => {
+    // ARRANGE: no model responses; a call to the model would fail the test.
+    stubFetch("# Title");
+    const prisma = makePrismaMock();
+    const quizId = crypto.randomUUID();
+    prisma.quiz.findFirst.mockResolvedValue(makeDbQuiz(quizId));
+    const graph = buildTestGraph([], prisma);
+
+    // ACT:
+    const result = await graph.invoke({ readme_url: BLOB_URL }, newThread());
+
+    // ASSERT: the first question comes from the stored quiz.
+    assert(isInterrupted(result));
+    const payload = AskQuestionPayloadSchema.parse(result[INTERRUPT][0].value);
+    expect(payload.index).toEqual(0);
+    expect(payload.question.id).toEqual(qid(0));
+    expect(JSON.stringify(result[INTERRUPT][0].value)).not.toContain(
+      "isCorrect",
+    );
+    // The lookup used the raw url and the newest row; nothing was created.
+    expect(prisma.quiz.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { sourceUrl: RAW_URL },
+        orderBy: { createdAt: "desc" },
+      }),
+    );
+    expect(prisma.quiz.create).not.toHaveBeenCalled();
+  });
+
+  it("generates a new quiz when no stored quiz matches the source url", async () => {
+    // ARRANGE:
+    stubFetch("# Title");
+    const prisma = makePrismaMock();
+    prisma.quiz.findFirst.mockResolvedValue(null);
+    prisma.quiz.create.mockResolvedValue(makeDbQuiz(crypto.randomUUID()));
+    const graph = buildTestGraph([JSON.stringify(fakeDraft)], prisma);
+
+    // ACT:
+    const result = await graph.invoke({ readme_url: BLOB_URL }, newThread());
+
+    // ASSERT: the miss fell through to generation and persistence.
+    assert(isInterrupted(result));
+    expect(prisma.quiz.create).toHaveBeenCalledOnce();
   });
 });
