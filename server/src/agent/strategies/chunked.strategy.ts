@@ -41,6 +41,7 @@ Rules:
 - The questions and options must be grammatically correct and free of spelling errors.
 - The questions and options must be in English.
 - Base the quiz title and description on this section, but keep them general enough to fit the whole document.
+- Randomize the correct option(s) and the order of the options for each question.
 `;
 }
 

@@ -29,6 +29,7 @@ Rules:
 - Do not use options such as "All of the above" or "None of the above".
 - The questions and options must be grammatically correct and free of spelling errors.
 - The questions and options must be in English.
+- Randomize the correct option(s) and the order of the options for each question.
 `;
 
 /**
