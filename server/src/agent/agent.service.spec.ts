@@ -192,6 +192,7 @@ describe("AgentService", () => {
       stream.mockReturnValue(
         streamOf(
           { fetchSource: { source: "# Title" } },
+          { loadQuiz: {} },
           { generateQuestions: { draft: makeDraft() } },
           { persistQuiz: { quiz: makeQuiz(crypto.randomUUID()) } },
           { [INTERRUPT]: [{ value: firstQuestion }] },
@@ -206,6 +207,7 @@ describe("AgentService", () => {
       // ASSERT: stages in order, then the question with the session id.
       expect(events).toEqual([
         { kind: "progress", stage: "fetching source" },
+        { kind: "progress", stage: "checking for existing quiz" },
         { kind: "progress", stage: "generating questions" },
         { kind: "progress", stage: "saving quiz" },
         {
