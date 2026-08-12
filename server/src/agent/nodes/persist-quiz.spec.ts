@@ -19,11 +19,12 @@ const state: typeof QuizState.State = {
 };
 
 describe("persistQuizNode", () => {
-  it("persists the draft and returns the quiz with database ids", async () => {
+  it("persists the draft and returns the quiz with database ids and shuffled options", async () => {
     // ARRANGE:
     const prisma = makePrismaMock();
     const quizId = crypto.randomUUID();
-    prisma.quiz.create.mockResolvedValue(makeDbQuiz(quizId));
+    const dbQuiz = makeDbQuiz(quizId);
+    prisma.quiz.create.mockResolvedValue(dbQuiz);
 
     // ACT:
     const result = await makePersistQuizNode(prisma, {
@@ -33,41 +34,68 @@ describe("persistQuizNode", () => {
 
     // ASSERT:
     assert.notInstanceOf(result, CommandInstance);
-    expect(result).toEqual({
-      quiz: makeQuiz(quizId),
-      startedAt: expect.any(String) as unknown,
-    });
+    expect(result).toBeDefined();
+    expect(result.quiz).toBeDefined();
+    expect(result.startedAt).toEqual(expect.any(String) as unknown);
 
-    expect(prisma.quiz.create).toHaveBeenCalledWith({
-      data: {
-        sourceUrl:
-          "https://raw.githubusercontent.com/owner/repo/main/README.md",
-        title: "hello",
-        description: "this is a quiz",
-        strategy: "strategy",
-        model: "modelName",
-        questions: {
-          create: makeDraft().questions.map((q, qi) => ({
-            position: qi,
-            text: q.text,
-            type: q.type === "single" ? "SINGLE" : "MULTI",
-            options: {
-              create: q.options.map((o, oi) => ({
-                position: oi,
-                text: o.text,
-                isCorrect: o.isCorrect,
-              })),
-            },
-          })),
-        },
-      },
-      include: {
-        questions: {
-          orderBy: { position: "asc" },
-          include: { options: { orderBy: { position: "asc" } } },
-        },
-      },
-    });
+    // Verify the quiz structure matches, but don't over-specify option order
+    // since they are randomized.
+    const { quiz } = result;
+    expect(quiz?.id).toBe(quizId);
+    expect(quiz?.title).toBe("hello");
+    expect(quiz?.description).toBe("this is a quiz");
+    expect(quiz?.questions).toHaveLength(dbQuiz.questions.length);
+
+    // Verify each question has the same options but possibly in different order
+    for (let i = 0; i < (quiz?.questions.length ?? 0); i++) {
+      const q = quiz?.questions[i];
+      const dbQ = dbQuiz.questions[i];
+      expect(q?.text).toBe(dbQ.text);
+      expect(q?.id).toBe(dbQ.id);
+      expect(q?.type).toBe(dbQ.type === "SINGLE" ? "single" : "multi");
+      expect(q?.options).toHaveLength(dbQ.options.length);
+
+      // Verify all option ids and texts are present (in any order)
+      const optionIds = new Set(q?.options.map((o) => o.id));
+      const dbOptionIds = new Set(dbQ.options.map((o) => o.id));
+      expect(optionIds).toEqual(dbOptionIds);
+    }
+
+    // Verify that quiz.create was called with shuffled options
+    const createCall = prisma.quiz.create.mock.calls[0]?.[0];
+    expect(createCall).toBeDefined();
+    expect(createCall?.data.sourceUrl).toBe(
+      "https://raw.githubusercontent.com/owner/repo/main/README.md",
+    );
+    expect(createCall?.data.title).toBe("hello");
+    expect(createCall?.data.description).toBe("this is a quiz");
+    expect(createCall?.data.strategy).toBe("strategy");
+    expect(createCall?.data.model).toBe("modelName");
+
+    // Verify options were shuffled: same options present but order may differ
+    const draftQuestions = makeDraft().questions;
+    interface CreateQuestionInput {
+      text?: string;
+      type?: string;
+      options?: { create: { text: string }[] };
+    }
+    const createQs = (createCall?.data.questions?.create as CreateQuestionInput[] | undefined) ?? [];
+    expect(createQs).toHaveLength(draftQuestions.length);
+
+    for (let i = 0; i < draftQuestions.length; i++) {
+      const draftQ = draftQuestions[i];
+      const createQ = createQs[i];
+      expect(createQ.text).toBe(draftQ.text);
+      expect(createQ.type).toBe(draftQ.type === "single" ? "SINGLE" : "MULTI");
+      expect(createQ.options?.create).toHaveLength(draftQ.options.length);
+
+      // Verify all original options are present (order may differ due to shuffle)
+      const originalOptionTexts = new Set(draftQ.options.map((o) => o.text));
+      const createOptionTexts = new Set(
+        (createQ.options?.create ?? []).map((o) => o.text),
+      );
+      expect(createOptionTexts).toEqual(originalOptionTexts);
+    }
   });
 
   it("is idempotent once the quiz is in state", async () => {

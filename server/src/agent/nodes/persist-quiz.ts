@@ -4,6 +4,7 @@ import { PrismaClient } from "../../generated/prisma/client";
 import { PersistQuizError, InvalidStateError } from "../../common/errors";
 import { QuizState } from "../state";
 import { fromDbQuestionType, toDbQuestionType } from "../question-type-map";
+import { shuffle } from "../../common/shuffle";
 
 /**
  * Creates a graph node that persists the quiz to the database using Prisma.
@@ -38,6 +39,11 @@ export function makePersistQuizNode(
     }
 
     try {
+      const shuffledQuestions = state.draft.questions.map((q) => ({
+        ...q,
+        options: shuffle([...q.options]),
+      }));
+
       const created = await prisma.quiz.create({
         data: {
           sourceUrl: state.readme_url,
@@ -46,7 +52,7 @@ export function makePersistQuizNode(
           strategy: quizMeta.strategy,
           model: quizMeta.model,
           questions: {
-            create: state.draft.questions.map((q, qi) => ({
+            create: shuffledQuestions.map((q, qi) => ({
               position: qi,
               text: q.text,
               type: toDbQuestionType(q.type),
@@ -61,7 +67,7 @@ export function makePersistQuizNode(
           },
         },
         // The read-back carries the database ids. The explicit orderBy
-        // keeps the generation order; Prisma does not guarantee one.
+        // keeps the shuffled order; Prisma does not guarantee one.
         include: {
           questions: {
             orderBy: { position: "asc" },
